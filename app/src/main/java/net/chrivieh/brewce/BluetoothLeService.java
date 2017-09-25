@@ -6,6 +6,8 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -23,6 +25,7 @@ import android.util.StringBuilderPrinter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class BluetoothLeService extends Service {
     public static final String TAG = BluetoothLeService.class.getSimpleName();
@@ -33,6 +36,7 @@ public class BluetoothLeService extends Service {
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
     private BluetoothGatt mBluetoothGatt;
+    private BluetoothGattCharacteristic mWriteCharacteristics;
 
     private Handler mHandler;
 
@@ -127,7 +131,7 @@ public class BluetoothLeService extends Service {
         if(mConnectionState != STATE_DISCONNECTED)
             return;
         Log.i(TAG, "Trying to connect to " + device.getAddress());
-        device.connectGatt(this, true, mGattCallback);
+        mBluetoothGatt = device.connectGatt(this, true, mGattCallback);
         mConnectionState = STATE_CONNECTING;
     }
 
@@ -147,6 +151,7 @@ public class BluetoothLeService extends Service {
                 intentAction = ACTION_GATT_CONNECTED;
                 mConnectionState = STATE_CONNECTED;
                 broadcastUpdate(intentAction);
+                mBluetoothGatt.discoverServices();
             }
             else if(newState == BluetoothProfile.STATE_DISCONNECTED) {
                 Log.i(TAG, "Disconnected from GATT server.");
@@ -165,6 +170,16 @@ public class BluetoothLeService extends Service {
             super.onServicesDiscovered(gatt, status);
             if(status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                BluetoothGattService service =
+                        mBluetoothGatt.getService(UUID.fromString("0000fe84-0000-1000-8000-00805f9b34fb"));
+                mWriteCharacteristics =
+                        service.getCharacteristic(UUID.fromString("2d30c083-f39f-4ce6-923f-3484ea480596"));
+                BluetoothGattCharacteristic readChar =
+                        service.getCharacteristic(UUID.fromString("2d30c082-f39f-4ce6-923f-3484ea480596"));
+                BluetoothGattDescriptor desc = readChar.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"));
+                mBluetoothGatt.setCharacteristicNotification(readChar, true);
+                desc.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                mBluetoothGatt.writeDescriptor(desc);
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }
@@ -173,7 +188,6 @@ public class BluetoothLeService extends Service {
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
-
             if(status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
@@ -183,7 +197,21 @@ public class BluetoothLeService extends Service {
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicWrite(gatt, characteristic, status);
         }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt,
+                                            BluetoothGattCharacteristic characteristic) {
+            super.onCharacteristicChanged(gatt, characteristic);
+            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+        }
     };
+
+    public void writeUInt16(int data) {
+        if(mWriteCharacteristics == null)
+            return;
+        mWriteCharacteristics.setValue(0x0100, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+        mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
+    }
 
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
@@ -200,7 +228,7 @@ public class BluetoothLeService extends Service {
             for(byte b: data) {
                 stringBuilder.append(String.format("%02X ", b));
             }
-            intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
+            intent.putExtra(EXTRA_DATA, data);
         }
 
         sendBroadcast(intent);

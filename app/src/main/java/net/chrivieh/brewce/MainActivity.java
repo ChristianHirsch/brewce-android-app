@@ -23,7 +23,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.ToggleButton;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import layout.AutomaticControlFragment;
 import layout.ManualControlFragment;
@@ -187,11 +191,20 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
             ToggleButton btn = (ToggleButton) findViewById(R.id.toggleButton);
+            TextView tvTemp = (TextView) findViewById(R.id.tvTemp);
 
             if(BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
                 btn.setEnabled(true);
+                tvTemp.setEnabled(true);
             } else if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 btn.setEnabled(false);
+                tvTemp.setEnabled(false);
+                tvTemp.setText("Disconnected");
+            } else if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+                StringBuilder sb = new StringBuilder();
+                byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
+                float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                tvTemp.setText(String.format("%3.2f°C", temp));
             }
         }
     };
