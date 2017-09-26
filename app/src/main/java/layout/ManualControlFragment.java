@@ -13,6 +13,7 @@ import android.widget.Button;
 import android.widget.ToggleButton;
 
 import net.chrivieh.brewce.BluetoothLeService;
+import net.chrivieh.brewce.MainActivity;
 import net.chrivieh.brewce.R;
 
 /**
@@ -57,7 +58,7 @@ public class ManualControlFragment extends Fragment {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            ToggleButton btn = (ToggleButton) getView().findViewById(R.id.toggleButton);
+            ToggleButton btn = (ToggleButton) getView().findViewById(R.id.tbOnOff);
 
             if(BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
                 btn.setEnabled(true);

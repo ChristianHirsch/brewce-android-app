@@ -1,12 +1,18 @@
 package layout;
 
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import net.chrivieh.brewce.R;
+import net.chrivieh.brewce.TemperatureControlService;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -17,6 +23,8 @@ import net.chrivieh.brewce.R;
  * create an instance of this fragment.
  */
 public class AutomaticControlFragment extends Fragment {
+
+    private TemperatureControlService mTemperatureControlService;
 
     public AutomaticControlFragment() {
         // Required empty public constructor
@@ -40,6 +48,9 @@ public class AutomaticControlFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
         }
+
+        Intent intent = new Intent(getActivity(), TemperatureControlService.class);
+        getActivity().bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
@@ -50,4 +61,17 @@ public class AutomaticControlFragment extends Fragment {
         //textView.setText(getString(R.string.section_format, getArguments().getInt(ARG_SECTION_NUMBER)));
         return rootView;
     }
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            mTemperatureControlService =
+                    ((TemperatureControlService.LocalBinder) iBinder).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            mTemperatureControlService = null;
+        }
+    };
 }

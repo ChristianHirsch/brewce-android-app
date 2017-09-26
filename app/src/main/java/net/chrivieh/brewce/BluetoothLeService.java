@@ -21,7 +21,6 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.util.StringBuilderPrinter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +41,7 @@ public class BluetoothLeService extends Service {
 
     private int mConnectionState = STATE_DISCONNECTED;
 
-    private static final long SCAN_PERIOD = 10000;
+    private static final long SCAN_PERIOD = 15000;
 
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
@@ -97,7 +96,7 @@ public class BluetoothLeService extends Service {
 
     @Override
     public boolean onUnbind(Intent intent) {
-        //close();
+        disconnect();
         return super.onUnbind(intent);
     }
 
@@ -209,7 +208,13 @@ public class BluetoothLeService extends Service {
     public void writeUInt16(int data) {
         if(mWriteCharacteristics == null)
             return;
-        mWriteCharacteristics.setValue(0x0100, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+        Log.i(TAG, "writeUInt16(" + data + ")");
+        mWriteCharacteristics.setValue(data, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+        mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
+    }
+
+    public void write(byte[] data) {
+        mWriteCharacteristics.setValue(data);
         mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
     }
 

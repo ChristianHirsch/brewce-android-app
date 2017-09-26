@@ -32,7 +32,11 @@
         <service
             android:name=".BluetoothLeService"
             android:enabled="true"
-            android:exported="true"></service>
+            android:exported="true" />
+        <service
+            android:name=".TemperatureControlService"
+            android:enabled="true"
+            android:exported="false"></service>
     </application>
 
 </manifest>

@@ -20,9 +20,15 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.CompoundButton;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
@@ -48,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
 
     BluetoothLeService mBluetoothLeService = null;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
+
+    private boolean uiElementsInitialized = false;
 
     final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
@@ -190,18 +198,22 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            ToggleButton btn = (ToggleButton) findViewById(R.id.toggleButton);
+            ToggleButton btn = (ToggleButton) findViewById(R.id.tbOnOff);
+            SeekBar sb = (SeekBar) findViewById(R.id.sbPower);
             TextView tvTemp = (TextView) findViewById(R.id.tvTemp);
 
             if(BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
+                if(uiElementsInitialized == false)
+                    initializeUiElements();
                 btn.setEnabled(true);
+                sb.setEnabled(true);
                 tvTemp.setEnabled(true);
             } else if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 btn.setEnabled(false);
+                sb.setEnabled(false);
                 tvTemp.setEnabled(false);
                 tvTemp.setText("Disconnected");
             } else if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                StringBuilder sb = new StringBuilder();
                 byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
                 float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
                 tvTemp.setText(String.format("%3.2f°C", temp));
@@ -216,5 +228,51 @@ public class MainActivity extends AppCompatActivity {
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         return intentFilter;
+    }
+
+    public void initializeUiElements() {
+        final ToggleButton btn = (ToggleButton) findViewById(R.id.tbOnOff);
+        final SeekBar sb = (SeekBar) findViewById(R.id.sbPower);
+
+        if (btn != null) {
+            btn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                    byte[] data = {0, 0};
+                    if (b == true) {
+                        data[0] = 0x01;
+                    } else {
+                        data[0] = 0x00;
+                    }
+                    data[1] = (byte)sb.getProgress();
+                    mBluetoothLeService.write(data);
+                }
+            });
+        }
+
+        if(sb != null) {
+            sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    byte[] data = {0, 0};
+                    if(btn.isChecked())
+                        data[0] = 0x01;
+                    else
+                        data[0] = 0x00;
+                    data[1] = (byte)seekBar.getProgress();
+                    mBluetoothLeService.write(data);
+                }
+            });
+        }
     }
 }

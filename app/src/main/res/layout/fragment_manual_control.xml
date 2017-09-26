@@ -18,7 +18,7 @@
             android:orientation="horizontal">
 
             <ToggleButton
-                android:id="@+id/toggleButton"
+                android:id="@+id/tbOnOff"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:enabled="false"
@@ -39,13 +39,14 @@
                 android:textSize="24sp" />
 
             <SeekBar
-                android:id="@+id/seekBar2"
+                android:id="@+id/sbPower"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:enabled="false"
                 android:max="255"
                 android:min="0"
-                android:minHeight="33dp" />
+                android:minHeight="33dp"
+                android:progress="0" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>
