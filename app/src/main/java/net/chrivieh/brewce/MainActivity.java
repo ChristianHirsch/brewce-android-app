@@ -57,20 +57,6 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean uiElementsInitialized = false;
 
-    final ServiceConnection mServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            Log.i(TAG, "onServiceConnected()");
-            mBluetoothLeService = ((BluetoothLeService.LocalBinder) iBinder).getService();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            Log.i(TAG, "onServiceConnected()");
-            mBluetoothLeService = null;
-        }
-    };
-
     /**
      * The {@link ViewPager} that will host the section contents.
      */
@@ -109,11 +95,6 @@ public class MainActivity extends AppCompatActivity {
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
                     PERMISSION_REQUEST_COARSE_LOCATION);
         }
-
-        Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
-        bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
-
-        registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
     }
 
     @Override
@@ -191,88 +172,6 @@ public class MainActivity extends AppCompatActivity {
                     return "Program Control";
             }
             return null;
-        }
-    }
-
-    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            ToggleButton btn = (ToggleButton) findViewById(R.id.tbOnOff);
-            SeekBar sb = (SeekBar) findViewById(R.id.sbPower);
-            TextView tvTemp = (TextView) findViewById(R.id.tvTemp);
-
-            if(BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-                if(uiElementsInitialized == false)
-                    initializeUiElements();
-                btn.setEnabled(true);
-                sb.setEnabled(true);
-                tvTemp.setEnabled(true);
-            } else if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-                btn.setEnabled(false);
-                sb.setEnabled(false);
-                tvTemp.setEnabled(false);
-                tvTemp.setText("Disconnected");
-            } else if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
-                float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
-                tvTemp.setText(String.format("%3.2f°C", temp));
-            }
-        }
-    };
-
-    private static IntentFilter makeGattUpdateIntentFilter() {
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        return intentFilter;
-    }
-
-    public void initializeUiElements() {
-        final ToggleButton btn = (ToggleButton) findViewById(R.id.tbOnOff);
-        final SeekBar sb = (SeekBar) findViewById(R.id.sbPower);
-
-        if (btn != null) {
-            btn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    byte[] data = {0, 0};
-                    if (b == true) {
-                        data[0] = 0x01;
-                    } else {
-                        data[0] = 0x00;
-                    }
-                    data[1] = (byte)sb.getProgress();
-                    mBluetoothLeService.write(data);
-                }
-            });
-        }
-
-        if(sb != null) {
-            sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-
-                }
-
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                    byte[] data = {0, 0};
-                    if(btn.isChecked())
-                        data[0] = 0x01;
-                    else
-                        data[0] = 0x00;
-                    data[1] = (byte)seekBar.getProgress();
-                    mBluetoothLeService.write(data);
-                }
-            });
         }
     }
 }

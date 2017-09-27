@@ -89,7 +89,7 @@ public class BluetoothLeService extends Service {
     }
 
     public class LocalBinder extends Binder {
-        BluetoothLeService getService() {
+        public BluetoothLeService getService() {
             return BluetoothLeService.this;
         }
     }
@@ -214,6 +214,9 @@ public class BluetoothLeService extends Service {
     }
 
     public void write(byte[] data) {
+        if(mWriteCharacteristics == null)
+            return;
+        Log.i(TAG, "write(" + data + ")");
         mWriteCharacteristics.setValue(data);
         mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
     }
