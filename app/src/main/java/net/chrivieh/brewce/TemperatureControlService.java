@@ -11,6 +11,8 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.attribute.AclEntry;
 
 public class TemperatureControlService extends Service {
@@ -27,7 +29,18 @@ public class TemperatureControlService extends Service {
 
     private BluetoothLeService mBluetoothLeService;
 
+    private PIDController mPIDController;
+
     public TemperatureControlService() {
+        mPIDController = new PIDController();
+
+        mPIDController.setKp(1.0f);
+        mPIDController.setKi(0.0f);
+        mPIDController.setKd(0.0f);
+
+        mPIDController.setWindupLimit(10.0f);
+        mPIDController.setLowerLimit(0.0f);
+        mPIDController.setUpperLimit(255.0f);
     }
 
     @Override
@@ -61,7 +74,15 @@ public class TemperatureControlService extends Service {
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.i(TAG, "Data available");
+            byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
+            float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+
+            float controlEffort = mPIDController.calcControlEffort(temp, 30.0f);
+            Log.i(TAG, "controlEffort(" + temp + ", " + 30.0f + ") = " + controlEffort);
+
+            byte[] wData = {0x02, 0x00};
+            wData[1] = (byte) controlEffort;
+            mBluetoothLeService.write(wData);
         }
     };
 }
