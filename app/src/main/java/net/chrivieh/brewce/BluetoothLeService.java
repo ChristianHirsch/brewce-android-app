@@ -117,6 +117,10 @@ public class BluetoothLeService extends Service {
                 .setNumOfMatches(1)
                 .build();
         List<ScanFilter> filters = new ArrayList<>();
+        ScanFilter scanFilter = new ScanFilter.Builder()
+                .setDeviceName("brewce_cooker")
+                .build();
+        filters.add(scanFilter);
 
         mBluetoothLeScanner.startScan(filters, settings, mScanCallback);
     }
@@ -157,10 +161,12 @@ public class BluetoothLeService extends Service {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 if(mConnectionState == STATE_CONNECTED) {
                     Log.i(TAG, "Trying to reconnect.");
-                    startScanning();
+                    connect(mBluetoothGatt.getDevice());
                 }
                 mConnectionState = STATE_DISCONNECTED;
                 broadcastUpdate(intentAction);
+            } else {
+                Log.i(TAG, "Other error.");
             }
         }
 
@@ -208,7 +214,6 @@ public class BluetoothLeService extends Service {
     public void writeUInt16(int data) {
         if(mWriteCharacteristics == null)
             return;
-        Log.i(TAG, "writeUInt16(" + data + ")");
         mWriteCharacteristics.setValue(data, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
         mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
     }
@@ -216,7 +221,6 @@ public class BluetoothLeService extends Service {
     public void write(byte[] data) {
         if(mWriteCharacteristics == null)
             return;
-        Log.i(TAG, "write(" + data + ")");
         mWriteCharacteristics.setValue(data);
         mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
     }
@@ -249,6 +253,8 @@ public class BluetoothLeService extends Service {
             Log.i(TAG, "onScanResult(): "
                     + result.getDevice().getName()
                     + result.getDevice().getAddress() );
+            connect(result.getDevice());
+            stopScanning();
         }
 
         @Override

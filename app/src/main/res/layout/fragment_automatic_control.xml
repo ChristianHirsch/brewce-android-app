@@ -12,16 +12,99 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
+        android:orientation="vertical">
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="fill_horizontal|center"
+            android:columnCount="2"
+            android:rowCount="2">
+
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="fill|end"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:text="Temperature:"
+                android:textAlignment="viewEnd"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/tvTemp"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_gravity="fill|start"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:text="Disconnected"
+                android:textAlignment="viewStart"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/textView3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="fill|end"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:text="Target:"
+                android:textAlignment="viewEnd"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/tvTargetTemp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center|fill"
+                android:layout_weight="1"
+                android:padding="5dp"
+                android:text="0.0°C"
+                android:textAlignment="viewStart"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+        </GridLayout>
+
+        <SeekBar
+            android:id="@+id/sbTargetTemp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:min="0"
+            android:minHeight="33dp"
+            android:progress="0" />
+
+        <ToggleButton
+            android:id="@+id/tbStartStop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ToggleButton" />
 
         <TextView
-            android:id="@+id/tvTemp"
-            android:layout_width="wrap_content"
+            android:id="@+id/tvControlEffort"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Disconnected"
-            android:textAlignment="center"
-            android:textSize="36sp"
-            android:textStyle="bold" />
+            android:gravity="center"
+            android:text="0"
+            android:textSize="33sp" />
+
+        <ProgressBar
+            android:id="@+id/pbPower"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_gravity="center|fill"
+            android:max="255"
+            android:min="0"
+            android:progress="0"
+            android:progressDrawable="@drawable/circular" />
+
     </LinearLayout>
+
 </RelativeLayout>

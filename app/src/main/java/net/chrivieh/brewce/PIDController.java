@@ -30,7 +30,6 @@ public class PIDController {
     public float calcControlEffort(float state) {
 
         long cycleTime = (long) System.currentTimeMillis();
-        Log.i(TemperatureControlService.TAG, "" + cycleTime);
 
         mError[2] = mError[1];
         mError[1] = mError[0];
@@ -43,7 +42,6 @@ public class PIDController {
 
         float dt = ((float)(cycleTime - mLastCycleTime)) / 1000.0f;
         mLastCycleTime = cycleTime;
-        Log.i(TemperatureControlService.TAG, "dt: " + dt);
 
         mIntegralError += mError[0] * dt;
         if(mIntegralError > Math.abs(mWindupLimit))
@@ -129,4 +127,6 @@ public class PIDController {
     public void setWindupLimit(float mWindupLimit) {
         this.mWindupLimit = mWindupLimit;
     }
+
+    public float getSetpoint() { return mSetpoint; }
 }

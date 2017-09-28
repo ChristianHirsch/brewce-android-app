@@ -113,45 +113,44 @@ public class ManualControlFragment extends Fragment {
         final ToggleButton btn = (ToggleButton) view.findViewById(R.id.tbOnOff);
         final SeekBar sb = (SeekBar) view.findViewById(R.id.sbPower);
 
-        if (btn != null) {
-            btn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    byte[] data = {0, 0};
-                    if (b == true) {
-                        data[0] = 0x01;
-                    } else {
-                        data[0] = 0x00;
-                    }
-                    data[1] = (byte) sb.getProgress();
-                    mBluetoothLeService.write(data);
+        btn.setEnabled(false);
+        btn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                byte[] data = {0, 0};
+                if (b == true) {
+                    data[0] = 0x01;
+                } else {
+                    data[0] = 0x00;
                 }
-            });
-        }
+                data[1] = (byte) sb.getProgress();
+                mBluetoothLeService.write(data);
+            }
+        });
 
-        if (sb != null) {
-            sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+        sb.setEnabled(false);
+        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
 
-                }
+            }
 
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
 
-                }
+            }
 
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                    byte[] data = {0, 0};
-                    if (btn.isChecked())
-                        data[0] = 0x01;
-                    else
-                        data[0] = 0x00;
-                    data[1] = (byte) seekBar.getProgress();
-                    mBluetoothLeService.write(data);
-                }
-            });
-        }
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                byte[] data = {0, 0};
+                if (btn.isChecked())
+                    data[0] = 0x01;
+                else
+                    data[0] = 0x00;
+                data[1] = (byte) seekBar.getProgress();
+                mBluetoothLeService.write(data);
+            }
+        });
+
     }
 }

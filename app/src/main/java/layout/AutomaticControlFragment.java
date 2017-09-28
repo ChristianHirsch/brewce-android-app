@@ -9,14 +9,21 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
+import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.R;
 import net.chrivieh.brewce.TemperatureControlService;
+
+import org.w3c.dom.Text;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -28,8 +35,22 @@ import java.nio.ByteOrder;
  */
 public class AutomaticControlFragment extends Fragment {
 
+    public final static String TAG = AutomaticControlFragment.class.getSimpleName();
+
     private TemperatureControlService mTemperatureControlService;
     private BluetoothLeService mBluetoothLeService;
+
+    private TextView tvTemp;
+    private TextView tvTargetTemp;
+    private SeekBar sbTargetTemp;
+    private ToggleButton tbStartStopp;
+    private TextView tvPower;
+    private ProgressBar pbPower;
+
+    public final static String ACTION_TARGET_TEMPERATURE_CHANGED =
+            "net.chrivieh.brewce.layout.AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED";
+    public final static String EXTRA_DATA =
+            "net.chrivieh.brewce.layout.AutomaticControlFragment.EXTRA_DATA";
 
     public AutomaticControlFragment() {
         // Required empty public constructor
@@ -58,10 +79,6 @@ public class AutomaticControlFragment extends Fragment {
         getActivity().bindService(intent, mBluetoothLeServiceConnection,
                 Context.BIND_AUTO_CREATE);
 
-        intent = new Intent(getActivity(), TemperatureControlService.class);
-        getActivity().bindService(intent, mTemperatureControlServiceConnection,
-                Context.BIND_AUTO_CREATE);
-
         getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
     }
 
@@ -69,6 +86,7 @@ public class AutomaticControlFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_automatic_control, container, false);
+        initializeUIElements(rootView);
         return rootView;
     }
 
@@ -91,6 +109,9 @@ public class AutomaticControlFragment extends Fragment {
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             mTemperatureControlService =
                     ((TemperatureControlService.LocalBinder) iBinder).getService();
+            final Intent intent = new Intent(ACTION_TARGET_TEMPERATURE_CHANGED);
+            intent.putExtra(EXTRA_DATA, sbTargetTemp.getProgress());
+            getActivity().sendBroadcast(intent);
         }
 
         @Override
@@ -103,6 +124,7 @@ public class AutomaticControlFragment extends Fragment {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(TemperatureControlService.ACTION_CONTROL_EFFORT_CHANGED);
         return intentFilter;
     }
 
@@ -110,7 +132,6 @@ public class AutomaticControlFragment extends Fragment {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            TextView tvTemp = (TextView) getActivity().findViewById(R.id.tvTemp);
 
             if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 tvTemp.setText("Disconnected");
@@ -118,8 +139,69 @@ public class AutomaticControlFragment extends Fragment {
             else if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
                 float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
-                tvTemp.setText(String.format("%3.2f°C", temp));
+                tvTemp.setText(String.format("%3.1f°C", temp));
+            }
+            else if(TemperatureControlService.ACTION_CONTROL_EFFORT_CHANGED.equals(action)) {
+                int controlEffort = intent.getIntExtra(TemperatureControlService.EXTRA_DATA, 0);
+                int power = (int)Math.round(((3500/250) * controlEffort) / 100);
+                tvPower.setText("" + power * 100);
+                pbPower.setProgress(controlEffort);
             }
         }
     };
+
+    private void initializeUIElements(View view) {
+        tvTemp = (TextView) view.findViewById(R.id.tvTemp);
+        tvTargetTemp = (TextView) view.findViewById(R.id.tvTargetTemp);
+        sbTargetTemp = (SeekBar) view.findViewById(R.id.sbTargetTemp);
+        tbStartStopp = (ToggleButton) view.findViewById(R.id.tbStartStop);
+        tvPower = (TextView) view.findViewById(R.id.tvControlEffort);
+        pbPower = (ProgressBar) view.findViewById(R.id.pbPower);
+
+        tbStartStopp.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if(b == true) {
+                    startAutomaticTemperatureControl();
+                }
+                else {
+                    stopAutomaticTemperatureControl();
+                }
+            }
+        });
+
+        sbTargetTemp.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                tvTargetTemp.setText(String.format("%3.1f°C", ((float)seekBar.getProgress())));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                final Intent intent = new Intent(ACTION_TARGET_TEMPERATURE_CHANGED);
+                intent.putExtra(EXTRA_DATA, seekBar.getProgress());
+                getActivity().sendBroadcast(intent);
+            }
+        });
+
+    }
+
+    private void startAutomaticTemperatureControl() {
+        Intent intent = new Intent(getActivity(), TemperatureControlService.class);
+        getActivity().bindService(intent, mTemperatureControlServiceConnection,
+                Context.BIND_AUTO_CREATE);
+    }
+
+    private void stopAutomaticTemperatureControl() {
+        getActivity().unbindService(mTemperatureControlServiceConnection);
+        tvPower.setText(0);
+        pbPower.setProgress(0);
+        byte[] data = {0, 0};
+        mBluetoothLeService.write(data);
+    }
 }
