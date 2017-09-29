@@ -199,7 +199,7 @@ public class AutomaticControlFragment extends Fragment {
 
     private void stopAutomaticTemperatureControl() {
         getActivity().unbindService(mTemperatureControlServiceConnection);
-        tvPower.setText(0);
+        tvPower.setText("" + 0);
         pbPower.setProgress(0);
         byte[] data = {0, 0};
         mBluetoothLeService.write(data);
