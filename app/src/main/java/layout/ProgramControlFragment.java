@@ -46,8 +46,7 @@ public class ProgramControlFragment extends Fragment {
 
     private FloatingActionButton fab;
 
-    List<HashMap<String, Float>> mTempProfilePoints = new ArrayList<HashMap<String, Float>>();
-    SimpleAdapter mAdapter;
+    SetpointListAdapter mAdapter;
 
     public ProgramControlFragment() {
         // Required empty public constructor
@@ -81,12 +80,7 @@ public class ProgramControlFragment extends Fragment {
         initializeUiElements(view);
 
         ListView lv = (ListView) view.findViewById(R.id.listView);
-        String[] from = {"setpoint", "time"};
-        int[] to = { R.id.temperature_setpoint, R.id.temperature_time };
-        mAdapter = new SimpleAdapter(getActivity(),
-                mTempProfilePoints,
-                R.layout.listitem_temperature,
-                from, to);
+        mAdapter = new SetpointListAdapter();
         lv.setAdapter(mAdapter);
 
         return view;
@@ -108,9 +102,9 @@ public class ProgramControlFragment extends Fragment {
             @Override
             public void onClick(View view) {
 
-                HashMap<String, Float> value = new HashMap<String, Float>();
-                mTempProfilePoints.add(value);
-                final int idx = mTempProfilePoints.indexOf(value);
+                Setpoint setpoint = new Setpoint();
+                mAdapter.addSetpoint(setpoint);
+                final int idx = mAdapter.getSetpointIdx(setpoint);
 
                 HmsPickerBuilder hpb = new HmsPickerBuilder()
                         .setFragmentManager(getActivity().getSupportFragmentManager())
@@ -120,7 +114,7 @@ public class ProgramControlFragment extends Fragment {
                     public void onDialogHmsSet(int reference, boolean isNegative,
                                                int hours, int minutes, int seconds) {
                         int time = ((hours * 60) + minutes) * 60 + seconds;
-                        mTempProfilePoints.get(idx).put("time", (float) time);
+                        mAdapter.getSetpoint(idx).time = time;
                         mAdapter.notifyDataSetChanged();
                         Log.i(TAG, "" + time);
                     }
@@ -136,12 +130,96 @@ public class ProgramControlFragment extends Fragment {
                     public void onDialogNumberSet(int reference, BigInteger number, double decimal,
                                                   boolean isNegative, BigDecimal fullNumber) {
                         float temp = fullNumber.floatValue();
-                        mTempProfilePoints.get(idx).put("setpoint", (float) temp);
+                        mAdapter.getSetpoint(idx).temperature = temp;
                         Log.i(TAG, "" + temp);
                     }
                 });
                 nbp.show();
             }
         });
+    }
+
+
+    private class Setpoint {
+        float temperature;
+        int time;
+    }
+
+    private class SetpointListAdapter extends BaseAdapter {
+
+        private ArrayList<Setpoint> mSetpoints;
+        private LayoutInflater mInflator;
+
+        public SetpointListAdapter() {
+            super();
+            mSetpoints = new ArrayList<Setpoint>();
+            mInflator = ProgramControlFragment.this.getActivity().getLayoutInflater();
+        }
+
+        public void addSetpoint(Setpoint setpoint) {
+            if(!mSetpoints.contains(setpoint))
+                mSetpoints.add(setpoint);
+        }
+
+        public void addSetpoint(float temperature, int time) {
+            Setpoint setpoint = new Setpoint();
+            setpoint.temperature = temperature;
+            setpoint.time = time;
+            if(!mSetpoints.contains(setpoint))
+                mSetpoints.add(setpoint);
+        }
+
+        public int getSetpointIdx(Setpoint setpoint) {
+            return mSetpoints.indexOf(setpoint);
+        }
+
+        public Setpoint getSetpoint(int pos) {
+            return mSetpoints.get(pos);
+        }
+
+        public void clear() {
+            mSetpoints.clear();
+        }
+
+        @Override
+        public int getCount() {
+             return mSetpoints.size();
+         }
+
+        @Override
+        public Object getItem(int pos) {
+             return getSetpoint(pos);
+        }
+
+        @Override
+        public long getItemId(int pos) {
+            return pos;
+        }
+
+        public View getView(int i, View view, ViewGroup viewGroup) {
+            ViewHolder viewHolder;
+
+            if(view == null) {
+                view = mInflator.inflate(R.layout.listitem_temperature, null);
+                viewHolder = new ViewHolder();
+                viewHolder.temperature = (TextView) view.findViewById(R.id.temperature_setpoint);
+                viewHolder.time = (TextView) view.findViewById(R.id.temperature_time);
+                view.setTag(viewHolder);
+            }
+            else {
+                viewHolder = (ViewHolder) view.getTag();
+            }
+
+            Setpoint setpoint = mSetpoints.get(i);
+            viewHolder.temperature.setText(""  + setpoint.temperature);
+            viewHolder.time.setText(""  + setpoint.time);
+
+            return view;
+        }
+    }
+
+    private class ViewHolder {
+        TextView temperature;
+        TextView time;
     }
 }
