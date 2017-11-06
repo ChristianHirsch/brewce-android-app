@@ -1,39 +1,40 @@
 package layout;
 
 
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
+import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
+import android.widget.CompoundButton;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 import com.codetroopers.betterpickers.hmspicker.HmsPickerBuilder;
 import com.codetroopers.betterpickers.hmspicker.HmsPickerDialogFragment;
 import com.codetroopers.betterpickers.numberpicker.NumberPickerBuilder;
 import com.codetroopers.betterpickers.numberpicker.NumberPickerDialogFragment;
 
-import net.chrivieh.brewce.MainActivity;
+import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.R;
-import net.chrivieh.brewce.TemperatureControlService;
+import net.chrivieh.brewce.TemperatureProfileControlService;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -44,9 +45,19 @@ public class ProgramControlFragment extends Fragment {
 
     public static final String TAG = ProgramControlFragment.class.getSimpleName();
 
+    public final static String ACTION_COUNTER_CHANGED =
+            "net.chrivieh.brewce.layout.ProgramControlFragment.ACTION_COUNTER_CHANGED";
+    public final static String EXTRA_DATA_COUNTER =
+            "net.chrivieh.brewce.layout.ProgramControlFragment.EXTRA_DATA_COUNTER";
+    public final static String EXTRA_DATA_TEMPERATURE =
+            "net.chrivieh.brewce.layout.ProgramControlFragment.EXTRA_DATA_TEMPERATURE";
+
     private FloatingActionButton fab;
 
     SetpointListAdapter mAdapter;
+
+    private TextView tvTemp;
+    private ToggleButton tbOnOffProgramControl;
 
     public ProgramControlFragment() {
         // Required empty public constructor
@@ -70,6 +81,8 @@ public class ProgramControlFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
         }
+
+        getActivity().registerReceiver(mBroadcastReceiver, makeUpdateIntentFilter());
     }
 
     @Override
@@ -97,7 +110,22 @@ public class ProgramControlFragment extends Fragment {
     }
 
     private void initializeUiElements(View view) {
+        tvTemp = (TextView) view.findViewById(R.id.tvTemp);
+        tbOnOffProgramControl = (ToggleButton) view.findViewById(R.id.tbOnOffProgram);
         fab = (FloatingActionButton) getActivity().findViewById(R.id.fab);
+
+        tbOnOffProgramControl.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if(b == true) {
+
+                }
+                else {
+
+                }
+            }
+        });
+
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -139,6 +167,51 @@ public class ProgramControlFragment extends Fragment {
         });
     }
 
+    private static IntentFilter makeUpdateIntentFilter() {
+        final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        return intentFilter;
+    }
+
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+
+            if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+                tvTemp.setText("Disconnected");
+            }
+            else if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+                byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
+                float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                tvTemp.setText(String.format("%3.1f°C", temp));
+            }
+        }
+    };
+
+    private ServiceConnection mTemperatureProfileControlServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    }
+
+    private void startAutomaticTemperatureProfileControl() {
+        Intent intent = new Intent(getActivity(), TemperatureProfileControlService.class);
+        getActivity().bindService(intent, mTemperatureProfileControlServiceConnection,
+                Context.BIND_AUTO_CREATE);
+    }
+
+    private void stopAutomaticTemperatureProfileControl() {
+        getActivity().unbindService(mTemperatureProfileControlServiceConnection);
+
+    }
 
     private class Setpoint {
         float temperature;
