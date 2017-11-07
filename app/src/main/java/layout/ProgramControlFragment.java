@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -28,7 +29,9 @@ import com.codetroopers.betterpickers.numberpicker.NumberPickerDialogFragment;
 
 import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.R;
+import net.chrivieh.brewce.Setpoint;
 import net.chrivieh.brewce.TemperatureProfileControlService;
+import net.chrivieh.brewce.TemperatureProfileData;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -58,6 +61,7 @@ public class ProgramControlFragment extends Fragment {
 
     private TextView tvTemp;
     private ToggleButton tbOnOffProgramControl;
+    private int mCurrentTempIdx = 0;
 
     public ProgramControlFragment() {
         // Required empty public constructor
@@ -118,10 +122,10 @@ public class ProgramControlFragment extends Fragment {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 if(b == true) {
-
+                    startAutomaticTemperatureProfileControl();
                 }
                 else {
-
+                    stopAutomaticTemperatureProfileControl();
                 }
             }
         });
@@ -171,6 +175,8 @@ public class ProgramControlFragment extends Fragment {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(TemperatureProfileControlService.ACTION_COUNTER_CHANGED);
+        intentFilter.addAction(TemperatureProfileControlService.ACTION_COUNTER_EXPIRED);
         return intentFilter;
     }
 
@@ -187,20 +193,30 @@ public class ProgramControlFragment extends Fragment {
                 float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
                 tvTemp.setText(String.format("%3.1f°C", temp));
             }
+            else if(TemperatureProfileControlService.ACTION_COUNTER_CHANGED.equals(action)) {
+                Setpoint setpoint = mAdapter.getSetpoint(mCurrentTempIdx);
+                setpoint.time = (int)intent.getLongExtra(
+                        TemperatureProfileControlService.EXTRA_DATA, 0);
+                mAdapter.notifyDataSetChanged();
+            }
         }
     };
 
     private ServiceConnection mTemperatureProfileControlServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-
+            Log.d(TAG, "onServiceConnected()");
+            Setpoint setpoint = mAdapter.getSetpoint(mCurrentTempIdx);
+            final Intent intent = new Intent(ACTION_COUNTER_CHANGED);
+            intent.putExtra(EXTRA_DATA_COUNTER, setpoint.time);
+            getActivity().sendBroadcast(intent);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
 
         }
-    }
+    };
 
     private void startAutomaticTemperatureProfileControl() {
         Intent intent = new Intent(getActivity(), TemperatureProfileControlService.class);
@@ -210,53 +226,45 @@ public class ProgramControlFragment extends Fragment {
 
     private void stopAutomaticTemperatureProfileControl() {
         getActivity().unbindService(mTemperatureProfileControlServiceConnection);
-
-    }
-
-    private class Setpoint {
-        float temperature;
-        int time;
     }
 
     private class SetpointListAdapter extends BaseAdapter {
 
-        private ArrayList<Setpoint> mSetpoints;
         private LayoutInflater mInflator;
 
         public SetpointListAdapter() {
             super();
-            mSetpoints = new ArrayList<Setpoint>();
             mInflator = ProgramControlFragment.this.getActivity().getLayoutInflater();
         }
 
-        public void addSetpoint(Setpoint setpoint) {
-            if(!mSetpoints.contains(setpoint))
-                mSetpoints.add(setpoint);
+        public void addSetpoint(TemperatureProfileData.Setpoint setpoint) {
+            if(!TemperatureProfileData.setpoints.contains(setpoint))
+                TemperatureProfileData.setpoints.add(setpoint);
         }
 
-        public void addSetpoint(float temperature, int time) {
-            Setpoint setpoint = new Setpoint();
+        public void addSetpoint(float temperature, long time) {
+            TemperatureProfileData.Setpoint setpoint = new TemperatureProfileData.Setpoint();
             setpoint.temperature = temperature;
             setpoint.time = time;
-            if(!mSetpoints.contains(setpoint))
-                mSetpoints.add(setpoint);
+            if(!TemperatureProfileData.setpoints.contains(setpoint))
+                TemperatureProfileData.setpoints.add(setpoint);
         }
 
-        public int getSetpointIdx(Setpoint setpoint) {
-            return mSetpoints.indexOf(setpoint);
+        public int getSetpointIdx(TemperatureProfileData.Setpoint setpoint) {
+            return TemperatureProfileData.setpoints.indexOf(setpoint);
         }
 
-        public Setpoint getSetpoint(int pos) {
-            return mSetpoints.get(pos);
+        public TemperatureProfileData.Setpoint getSetpoint(int pos) {
+            return TemperatureProfileData.setpoints.get(pos);
         }
 
         public void clear() {
-            mSetpoints.clear();
+            TemperatureProfileData.setpoints.clear();
         }
 
         @Override
         public int getCount() {
-             return mSetpoints.size();
+             return TemperatureProfileData.setpoints.size();
          }
 
         @Override
@@ -283,9 +291,9 @@ public class ProgramControlFragment extends Fragment {
                 viewHolder = (ViewHolder) view.getTag();
             }
 
-            Setpoint setpoint = mSetpoints.get(i);
+            TemperatureProfileData.Setpoint setpoint = TemperatureProfileData.setpoints.get(i);
             viewHolder.temperature.setText(""  + setpoint.temperature);
-            viewHolder.time.setText(""  + setpoint.time);
+            viewHolder.time.setText(""  + DateUtils.formatElapsedTime(setpoint.time));
 
             return view;
         }

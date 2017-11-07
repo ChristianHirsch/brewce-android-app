@@ -11,6 +11,7 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -40,8 +41,9 @@ public class TemperatureProfileControlService extends Service {
 
             Intent intent;
 
+            mCounterMillis -= diff;
             intent = new Intent(ACTION_COUNTER_CHANGED);
-            intent.putExtra(EXTRA_DATA, (int) mCounterMillis / 1000);
+            intent.putExtra(EXTRA_DATA, (long) mCounterMillis / 1000);
             sendBroadcast(intent);
 
             if(mCounterMillis < 0) {
@@ -51,6 +53,8 @@ public class TemperatureProfileControlService extends Service {
             }
 
             mHandler.postDelayed(this, 250);
+
+            Log.d(TAG, "r.run(): " + diff + " "  + mCounterMillis);
         }
     };
 
@@ -78,16 +82,18 @@ public class TemperatureProfileControlService extends Service {
     public void onCreate() {
         super.onCreate();
         registerReceiver(mBroadcastReceiver, makeUpdateIntentFilter());
+        Log.d(TAG, "onCreate()");
     }
 
     @Override
     public void onDestroy() {
-
+        unregisterReceiver(mBroadcastReceiver);
     }
 
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "onReceive()");
             if(intent.getAction().equals(BluetoothLeService.ACTION_DATA_AVAILABLE)) {
                 byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
                 float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
@@ -102,7 +108,9 @@ public class TemperatureProfileControlService extends Service {
                 }
             }
             else if(intent.getAction().equals(ProgramControlFragment.ACTION_COUNTER_CHANGED)) {
-                mCounterMillis = intent.getIntExtra(ProgramControlFragment.EXTRA_DATA_COUNTER, 0) * 1000;
+                Log.d(TAG, "onReceive(): ProgramControlFragment.ACTION_COUNTER_CHANGED");
+                mCounterMillis = intent.getLongExtra(ProgramControlFragment.EXTRA_DATA_COUNTER, 0) * 1000;
+                mHandler.post(r);
             }
         }
     };
