@@ -95,6 +95,8 @@ public class TemperatureControlService extends Service {
             if(intent.getAction().equals(BluetoothLeService.ACTION_DATA_AVAILABLE)) {
                 byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
                 float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                if(temp < -273.15f || temp > 120.0f)
+                    return;
 
                 float controlEffort = mPIDController.calcControlEffort(temp);
 
