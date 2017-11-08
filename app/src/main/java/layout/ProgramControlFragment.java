@@ -1,9 +1,11 @@
 package layout;
 
 
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -16,6 +18,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.CompoundButton;
 import android.widget.ListView;
@@ -29,7 +32,6 @@ import com.codetroopers.betterpickers.numberpicker.NumberPickerDialogFragment;
 
 import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.R;
-import net.chrivieh.brewce.Setpoint;
 import net.chrivieh.brewce.TemperatureProfileControlService;
 import net.chrivieh.brewce.TemperatureProfileData;
 
@@ -61,7 +63,9 @@ public class ProgramControlFragment extends Fragment {
 
     private TextView tvTemp;
     private ToggleButton tbOnOffProgramControl;
+    private ListView mListView;
     private int mCurrentTempIdx = 0;
+    private boolean isBound = false;
 
     public ProgramControlFragment() {
         // Required empty public constructor
@@ -96,9 +100,28 @@ public class ProgramControlFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_program_control, container, false);
         initializeUiElements(view);
 
-        ListView lv = (ListView) view.findViewById(R.id.listView);
+        mListView = (ListView) view.findViewById(R.id.listView);
         mAdapter = new SetpointListAdapter();
-        lv.setAdapter(mAdapter);
+        mListView.setAdapter(mAdapter);
+        mListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                AlertDialog.Builder adb = new AlertDialog.Builder(getActivity());
+                adb.setTitle("Delete?");
+                adb.setMessage("Are you sure you want to delete this item?");
+                final int positionToRemove = i;
+                adb.setNegativeButton("No", null);
+                adb.setPositiveButton("Yes", new AlertDialog.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        stopAutomaticTemperatureProfileControl();
+                        TemperatureProfileData.setpoints.remove(positionToRemove);
+                        mAdapter.notifyDataSetChanged();
+                    }
+                });
+                adb.show();
+                return false;
+            }
+        });
 
         return view;
     }
@@ -134,7 +157,7 @@ public class ProgramControlFragment extends Fragment {
             @Override
             public void onClick(View view) {
 
-                Setpoint setpoint = new Setpoint();
+                TemperatureProfileData.Setpoint setpoint = new TemperatureProfileData.Setpoint();
                 mAdapter.addSetpoint(setpoint);
                 final int idx = mAdapter.getSetpointIdx(setpoint);
 
@@ -146,7 +169,7 @@ public class ProgramControlFragment extends Fragment {
                     public void onDialogHmsSet(int reference, boolean isNegative,
                                                int hours, int minutes, int seconds) {
                         int time = ((hours * 60) + minutes) * 60 + seconds;
-                        mAdapter.getSetpoint(idx).time = time;
+                        mAdapter.getSetpoint(idx).time = time * 1000;
                         mAdapter.notifyDataSetChanged();
                         Log.i(TAG, "" + time);
                     }
@@ -194,10 +217,10 @@ public class ProgramControlFragment extends Fragment {
                 tvTemp.setText(String.format("%3.1f°C", temp));
             }
             else if(TemperatureProfileControlService.ACTION_COUNTER_CHANGED.equals(action)) {
-                Setpoint setpoint = mAdapter.getSetpoint(mCurrentTempIdx);
-                setpoint.time = (int)intent.getLongExtra(
-                        TemperatureProfileControlService.EXTRA_DATA, 0);
                 mAdapter.notifyDataSetChanged();
+            }
+            else if(TemperatureProfileControlService.ACTION_COUNTER_EXPIRED.equals(action)) {
+                stopAutomaticTemperatureProfileControl();
             }
         }
     };
@@ -206,10 +229,7 @@ public class ProgramControlFragment extends Fragment {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             Log.d(TAG, "onServiceConnected()");
-            Setpoint setpoint = mAdapter.getSetpoint(mCurrentTempIdx);
-            final Intent intent = new Intent(ACTION_COUNTER_CHANGED);
-            intent.putExtra(EXTRA_DATA_COUNTER, setpoint.time);
-            getActivity().sendBroadcast(intent);
+            isBound = true;
         }
 
         @Override
@@ -225,7 +245,10 @@ public class ProgramControlFragment extends Fragment {
     }
 
     private void stopAutomaticTemperatureProfileControl() {
-        getActivity().unbindService(mTemperatureProfileControlServiceConnection);
+        tbOnOffProgramControl.setChecked(false);
+        if(isBound)
+            getActivity().unbindService(mTemperatureProfileControlServiceConnection);
+        isBound = false;
     }
 
     private class SetpointListAdapter extends BaseAdapter {
@@ -293,7 +316,7 @@ public class ProgramControlFragment extends Fragment {
 
             TemperatureProfileData.Setpoint setpoint = TemperatureProfileData.setpoints.get(i);
             viewHolder.temperature.setText(""  + setpoint.temperature);
-            viewHolder.time.setText(""  + DateUtils.formatElapsedTime(setpoint.time));
+            viewHolder.time.setText(""  + DateUtils.formatElapsedTime(setpoint.time / 1000));
 
             return view;
         }

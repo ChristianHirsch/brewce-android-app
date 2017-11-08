@@ -15,6 +15,7 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
@@ -80,7 +81,15 @@ public class BluetoothLeService extends Service {
         }
 
         mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
-        startScanning();
+
+        if(mBluetoothAdapter.isEnabled())
+            startScanning();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(mBroadcastReceiver);
     }
 
     @Override
@@ -276,4 +285,12 @@ public class BluetoothLeService extends Service {
             Log.i(TAG, "onScanFailed()");
         }
     };
+
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+        }
+    };
+
 }

@@ -9,11 +9,9 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Binder;
 import android.os.IBinder;
-import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.attribute.AclEntry;
 
 import layout.AutomaticControlFragment;
 
@@ -68,7 +66,7 @@ public class TemperatureControlService extends Service {
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED);
         // register for updates from BluetoothLeService
-        registerReceiver(mGattUpdateReceiver,
+        registerReceiver(mBroadcastReceiver,
                 new IntentFilter(intentFilter));
     }
 
@@ -88,10 +86,10 @@ public class TemperatureControlService extends Service {
     public void onDestroy() {
         super.onDestroy();
         unbindService(mServiceConnection);
-        unregisterReceiver(mGattUpdateReceiver);
+        unregisterReceiver(mBroadcastReceiver);
     }
 
-    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if(intent.getAction().equals(BluetoothLeService.ACTION_DATA_AVAILABLE)) {
@@ -110,6 +108,10 @@ public class TemperatureControlService extends Service {
             }
             else if(intent.getAction().equals(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED)) {
                 int targetTemp = intent.getIntExtra(AutomaticControlFragment.EXTRA_DATA, 0);
+                mPIDController.setSetpoint((float)targetTemp);
+            }
+            else if(intent.getAction().equals(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED)) {
+                int targetTemp = intent.getIntExtra(TemperatureProfileControlService.EXTRA_DATA, 0);
                 mPIDController.setSetpoint((float)targetTemp);
             }
         }

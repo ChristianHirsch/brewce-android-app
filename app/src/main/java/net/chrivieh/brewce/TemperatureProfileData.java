@@ -2,16 +2,28 @@ package net.chrivieh.brewce;
 
 import java.util.ArrayList;
 
-/**
- * Created by chrivieh on 07.11.2017.
- */
-
 public class TemperatureProfileData {
 
-    public class Setpoint {
+    public static class Setpoint {
         public float temperature;
         public long time;
     }
 
     public static ArrayList<Setpoint> setpoints = new ArrayList<Setpoint>();
+
+    public static Setpoint getSetpointOfIdx(int idx) {
+        return setpoints.get(idx);
+    }
+
+    public static long getTimeOfIdx(int idx) {
+        return setpoints.get(idx).time;
+    }
+
+    public static float getTemperatureOfIdx(int idx) {
+        return setpoints.get(idx).temperature;
+    }
+
+    public static int size() {
+        return setpoints.size();
+    }
 }
