@@ -9,7 +9,6 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,8 +21,6 @@ import android.widget.ToggleButton;
 import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.R;
 import net.chrivieh.brewce.TemperatureControlService;
-
-import org.w3c.dom.Text;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -79,7 +76,7 @@ public class AutomaticControlFragment extends Fragment {
         getActivity().bindService(intent, mBluetoothLeServiceConnection,
                 Context.BIND_AUTO_CREATE);
 
-        getActivity().registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        getActivity().registerReceiver(mBroadcastReceiver, makeUpdateIntentFilter());
     }
 
     @Override
@@ -120,7 +117,7 @@ public class AutomaticControlFragment extends Fragment {
         }
     };
 
-    private static IntentFilter makeGattUpdateIntentFilter() {
+    private static IntentFilter makeUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
@@ -128,7 +125,7 @@ public class AutomaticControlFragment extends Fragment {
         return intentFilter;
     }
 
-    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();

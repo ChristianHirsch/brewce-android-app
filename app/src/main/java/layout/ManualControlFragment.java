@@ -32,6 +32,9 @@ public class ManualControlFragment extends Fragment {
 
     private BluetoothLeService mBluetoothLeService;
 
+    private ToggleButton tbOnOff;
+    private SeekBar sbPower;
+
     public ManualControlFragment() {
         // Required empty public constructor
     }
@@ -75,16 +78,13 @@ public class ManualControlFragment extends Fragment {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            ToggleButton btn =
-                    (ToggleButton) getActivity().findViewById(R.id.tbOnOff);
-            SeekBar sb = (SeekBar) getActivity().findViewById(R.id.sbPower);
 
             if(BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-                btn.setEnabled(true);
-                sb.setEnabled(true);
+                tbOnOff.setEnabled(true);
+                sbPower.setEnabled(true);
             } else if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-                btn.setEnabled(false);
-                sb.setEnabled(false);
+                tbOnOff.setEnabled(false);
+                sbPower.setEnabled(false);
             }
         }
     };
@@ -110,11 +110,11 @@ public class ManualControlFragment extends Fragment {
     }
 
     private void initializeUiElements(View view) {
-        final ToggleButton btn = (ToggleButton) view.findViewById(R.id.tbOnOff);
-        final SeekBar sb = (SeekBar) view.findViewById(R.id.sbPower);
+        tbOnOff = (ToggleButton) view.findViewById(R.id.tbOnOff);
+        sbPower = (SeekBar) view.findViewById(R.id.sbPower);
 
-        btn.setEnabled(false);
-        btn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        tbOnOff.setEnabled(false);
+        tbOnOff.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 byte[] data = {0, 0};
@@ -123,13 +123,13 @@ public class ManualControlFragment extends Fragment {
                 } else {
                     data[0] = 0x00;
                 }
-                data[1] = (byte) sb.getProgress();
+                data[1] = (byte) sbPower.getProgress();
                 mBluetoothLeService.write(data);
             }
         });
 
-        sb.setEnabled(false);
-        sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        sbPower.setEnabled(false);
+        sbPower.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
 
@@ -143,7 +143,7 @@ public class ManualControlFragment extends Fragment {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 byte[] data = {0, 0};
-                if (btn.isChecked())
+                if (tbOnOff.isChecked())
                     data[0] = 0x01;
                 else
                     data[0] = 0x00;

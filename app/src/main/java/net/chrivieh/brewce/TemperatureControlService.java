@@ -42,6 +42,7 @@ public class TemperatureControlService extends Service {
         mPIDController = new PIDController();
 
         mPIDController.setKp(25.5f);
+
         mPIDController.setKi(5.0f);
         mPIDController.setKd(2.5f);
 
