@@ -35,6 +35,8 @@ import net.chrivieh.brewce.R;
 import net.chrivieh.brewce.TemperatureProfileControlService;
 import net.chrivieh.brewce.TemperatureProfileData;
 
+import org.w3c.dom.Text;
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -62,6 +64,7 @@ public class ProgramControlFragment extends Fragment {
     SetpointListAdapter mAdapter;
 
     private TextView tvTemp;
+    private TextView tvTargetTemp;
     private ToggleButton tbOnOffProgramControl;
     private ListView mListView;
     private int mCurrentTempIdx = 0;
@@ -138,6 +141,7 @@ public class ProgramControlFragment extends Fragment {
 
     private void initializeUiElements(View view) {
         tvTemp = (TextView) view.findViewById(R.id.tvTemp);
+        tvTargetTemp = (TextView) view.findViewById(R.id.tvTargetTemp);
         tbOnOffProgramControl = (ToggleButton) view.findViewById(R.id.tbOnOffProgram);
         fab = (FloatingActionButton) getActivity().findViewById(R.id.fab);
 
@@ -200,6 +204,7 @@ public class ProgramControlFragment extends Fragment {
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_COUNTER_CHANGED);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_COUNTER_EXPIRED);
+        intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
         return intentFilter;
     }
 
@@ -221,6 +226,10 @@ public class ProgramControlFragment extends Fragment {
             }
             else if(TemperatureProfileControlService.ACTION_COUNTER_EXPIRED.equals(action)) {
                 stopAutomaticTemperatureProfileControl();
+            } else if(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED.equals(action)) {
+                float targetTemp = intent.getFloatExtra(
+                        TemperatureProfileControlService.EXTRA_DATA, 0);
+                tvTargetTemp.setText(String.format("%3.1f°C", 0.0f));
             }
         }
     };

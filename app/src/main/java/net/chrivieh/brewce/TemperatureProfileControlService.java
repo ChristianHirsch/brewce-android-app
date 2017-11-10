@@ -57,6 +57,7 @@ public class TemperatureProfileControlService extends Service {
 
             TemperatureProfileData.Setpoint setpoint =
                     TemperatureProfileData.getSetpointOfIdx(mTempProfileIdx);
+            targetTemp = setpoint.temperature;
             setpoint.time -= diff;
             sendCounterChangedBroadcast();
 
@@ -89,6 +90,7 @@ public class TemperatureProfileControlService extends Service {
     public void onCreate() {
         super.onCreate();
 
+        mRunning = false;
         if(TemperatureProfileData.size() < 1) {
             sendCounterExpiredBroadcast();
             return;
@@ -111,14 +113,19 @@ public class TemperatureProfileControlService extends Service {
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.d(TAG, "onReceive()");
             if(intent.getAction().equals(BluetoothLeService.ACTION_DATA_AVAILABLE)) {
+
                 byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
                 float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                TemperatureProfileData.Setpoint setpoint =
+                        TemperatureProfileData.getSetpointOfIdx(mTempProfileIdx);
+                targetTemp = setpoint.temperature;
 
-                if((Math.abs(targetTemp - temp) < 1.0f) && mRunning == false) {
-                    mElapsed = SystemClock.uptimeMillis();
-                    mHandler.post(r);
+                if((Math.abs(targetTemp - temp) < 1.0f)) {
+                    if(mRunning == false) {
+                        mElapsed = SystemClock.uptimeMillis();
+                        mHandler.post(r);
+                    }
                 } else {
                     mRunning = false;
                     mHandler.removeCallbacks(r);
@@ -146,7 +153,6 @@ public class TemperatureProfileControlService extends Service {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(TemperatureProfileControlService.ACTION_COUNTER_CHANGED);
         return intentFilter;
     }
 
