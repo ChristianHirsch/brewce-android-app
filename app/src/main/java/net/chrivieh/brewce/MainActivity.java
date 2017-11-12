@@ -28,6 +28,9 @@ import layout.TemperatureProfileControlFragment;
 public class MainActivity extends AppCompatActivity {
     public static final String TAG = MainActivity.class.getSimpleName();
 
+    public final static String ACTION_START_SCAN =
+            "net.chrivieh.brewce.MainActivity.ACTION_START_SCAN";
+
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
      * fragments for each of the sections. We use a
@@ -40,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
     BluetoothLeService mBluetoothLeService = null;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
+    private static final int PERMISSION_ENABLE_BT = 1;
 
     private boolean uiElementsInitialized = false;
 
@@ -84,21 +88,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // check if bluetooth is enabled
-        BluetoothAdapter bluetoothAdapter =
-                ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
-
-        if(bluetoothAdapter == null || bluetoothAdapter.isEnabled() == false) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, 1);
-        }
-
-        // check if location permissions are granted
-        if(this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) !=
-                PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    PERMISSION_REQUEST_COARSE_LOCATION);
-        }
+        checkForBlePermissions();
     }
 
     @Override
@@ -127,8 +117,12 @@ public class MainActivity extends AppCompatActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_scan) {
+            checkForBlePermissions();
+            sendStartBleScanBroadcast();
+            return true;
+        }
+        else if (id == R.id.action_settings) {
             getFragmentManager().beginTransaction()
                     .replace(android.R.id.content, new SettingsFragment())
                     .commit();
@@ -136,6 +130,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+        if (requestCode == PERMISSION_ENABLE_BT) {
+            if (resultCode == Activity.RESULT_OK) {
+                sendStartBleScanBroadcast();
+            }
+        }
     }
 
     /**
@@ -179,6 +183,29 @@ public class MainActivity extends AppCompatActivity {
                     return "Program Control";
             }
             return null;
+        }
+    }
+
+    private void sendStartBleScanBroadcast() {
+        Intent intent = new Intent(ACTION_START_SCAN);
+        sendBroadcast(intent);
+    }
+
+    private void checkForBlePermissions() {
+        // check if bluetooth is enabled
+        BluetoothAdapter bluetoothAdapter =
+                ((BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter();
+
+        if(bluetoothAdapter == null || bluetoothAdapter.isEnabled() == false) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, PERMISSION_ENABLE_BT);
+        }
+
+        // check if location permissions are granted
+        if(this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                    PERMISSION_REQUEST_COARSE_LOCATION);
         }
     }
 }
