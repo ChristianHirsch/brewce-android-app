@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
@@ -7,7 +8,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="fill_horizontal|center"
-        android:columnCount="2"
+        android:columnCount="3"
         android:rowCount="1">
         <TextView android:id="@+id/temperature_setpoint"
             android:layout_width="wrap_content"
@@ -15,7 +16,7 @@
             android:layout_gravity="fill|end"
             android:padding="5dp"
             android:textAlignment="viewEnd"
-            android:text="Hello"
+            android:text="0.0°C"
             android:textSize="24sp"/>
         <TextView android:id="@+id/temperature_time"
             android:layout_width="wrap_content"
@@ -23,8 +24,17 @@
             android:layout_gravity="fill|start"
             android:padding="5dp"
             android:textAlignment="viewStart"
-            android:text="World"
+            android:text="00:00"
             android:textSize="24sp"/>
+
+        <ImageView
+            android:id="@+id/iv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="5dp"
+            android:visibility="invisible"
+            android:src="@drawable/ic_check_normal_light"
+            app:srcCompat="@android:drawable/ic_media_play" />
     </GridLayout>
 
 </LinearLayout>

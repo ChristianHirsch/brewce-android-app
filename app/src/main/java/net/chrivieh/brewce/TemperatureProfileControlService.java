@@ -55,9 +55,11 @@ public class TemperatureProfileControlService extends Service {
                     TemperatureProfileData.getSetpointOfIdx(mTempProfileIdx);
             targetTemp = setpoint.temperature;
             setpoint.time -= diff;
+            setpoint.status = TemperatureProfileData.Setpoint.Status.ACTIVE;
             sendCounterChangedBroadcast();
 
-            if(setpoint.time < 0) {
+            if(setpoint.time <= 0) {
+                setpoint.status = TemperatureProfileData.Setpoint.Status.FINISHED;
                 mTempProfileIdx++;
                 diff = setpoint.time;
                 if(mTempProfileIdx >= TemperatureProfileData.setpoints.size())

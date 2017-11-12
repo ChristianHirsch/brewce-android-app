@@ -7,6 +7,12 @@ public class TemperatureProfileData {
     public static class Setpoint {
         public float temperature;
         public long time;
+        public enum Status {
+            WAITING,
+            ACTIVE,
+            FINISHED
+        }
+        public Status status = Status.WAITING;
     }
 
     public static ArrayList<Setpoint> setpoints = new ArrayList<Setpoint>();

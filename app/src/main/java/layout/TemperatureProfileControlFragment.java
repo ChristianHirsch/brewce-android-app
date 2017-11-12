@@ -22,6 +22,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -300,8 +301,8 @@ public class TemperatureProfileControlFragment extends Fragment {
             if(view == null) {
                 view = mInflator.inflate(R.layout.listitem_temperature, null);
                 viewHolder = new ViewHolder();
-                viewHolder.temperature = (TextView) view.findViewById(R.id.temperature_setpoint);
-                viewHolder.time = (TextView) view.findViewById(R.id.temperature_time);
+                viewHolder.tvTemperature = (TextView) view.findViewById(R.id.temperature_setpoint);
+                viewHolder.tvTime = (TextView) view.findViewById(R.id.temperature_time);
                 view.setTag(viewHolder);
             }
             else {
@@ -309,16 +310,29 @@ public class TemperatureProfileControlFragment extends Fragment {
             }
 
             TemperatureProfileData.Setpoint setpoint = TemperatureProfileData.setpoints.get(i);
-            viewHolder.temperature.setText(""  + setpoint.temperature);
-            viewHolder.time.setText(""  + DateUtils.formatElapsedTime(setpoint.time / 1000));
+            viewHolder.tvTemperature.setText(""  + setpoint.temperature);
+            viewHolder.tvTime.setText(""  + DateUtils.formatElapsedTime(setpoint.time / 1000));
+            switch (setpoint.status) {
+                case ACTIVE:
+                    viewHolder.ivStatus.setVisibility(View.VISIBLE);
+                    viewHolder.ivStatus.setImageResource(android.R.drawable.ic_media_play);
+                    break;
+                case FINISHED:
+                    viewHolder.ivStatus.setVisibility(View.VISIBLE);
+                    viewHolder.ivStatus.setImageResource(R.drawable.ic_check_normal_light);
+                    break;
+                default:
+                    viewHolder.ivStatus.setVisibility(View.INVISIBLE);
+            }
 
             return view;
         }
     }
 
     private class ViewHolder {
-        TextView temperature;
-        TextView time;
+        TextView tvTemperature;
+        TextView tvTime;
+        ImageView ivStatus;
     }
 
     private void showEditTemperatureProfileSetpoint(final int idx)
