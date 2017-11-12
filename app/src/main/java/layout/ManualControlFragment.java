@@ -94,6 +94,8 @@ public class ManualControlFragment extends Fragment {
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             mBluetoothLeService =
                     ((BluetoothLeService.LocalBinder) iBinder).getService();
+            tbOnOff.setEnabled(mBluetoothLeService.isConnected());
+            sbPower.setEnabled(mBluetoothLeService.isConnected());
         }
 
         @Override
