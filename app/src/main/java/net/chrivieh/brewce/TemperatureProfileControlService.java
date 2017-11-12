@@ -11,13 +11,9 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.SystemClock;
-import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Set;
-
-import layout.ProgramControlFragment;
 
 public class TemperatureProfileControlService extends Service {
 
