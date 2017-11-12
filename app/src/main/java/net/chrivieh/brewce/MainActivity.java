@@ -1,17 +1,12 @@
 package net.chrivieh.brewce;
 
 import android.Manifest;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.os.IBinder;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.TabLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -21,24 +16,14 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
-import android.util.AttributeSet;
-import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.CompoundButton;
-import android.widget.SeekBar;
-import android.widget.TextView;
-import android.widget.ToggleButton;
-
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 import layout.AutomaticControlFragment;
 import layout.ManualControlFragment;
-import layout.ProgramControlFragment;
+import layout.SettingsFragment;
+import layout.TemperatureProfileControlFragment;
 
 public class MainActivity extends AppCompatActivity {
     public static final String TAG = MainActivity.class.getSimpleName();
@@ -144,6 +129,9 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            getFragmentManager().beginTransaction()
+                    .replace(android.R.id.content, new SettingsFragment())
+                    .commit();
             return true;
         }
 
@@ -167,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
                 case 1:
                     return AutomaticControlFragment.newInstance();
                 case 2:
-                    return ProgramControlFragment.newInstance();
+                    return TemperatureProfileControlFragment.newInstance();
                 default:
                     return ManualControlFragment.newInstance();
 
