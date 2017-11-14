@@ -22,11 +22,18 @@ import android.content.IntentFilter;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.util.Log;
 
+import com.github.mikephil.charting.data.Entry;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import layout.TemperatureChartFragment;
 
 public class BluetoothLeService extends Service {
     public static final String TAG = BluetoothLeService.class.getSimpleName();
@@ -60,6 +67,8 @@ public class BluetoothLeService extends Service {
             "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA =
             "com.example.bluetooth.le.EXTRA_DATA";
+    public final static String EXTRA_DATA_FLOAT =
+            "com.example.bluetooth.le.EXTRA_DATA_FLOAT";
 
     public BluetoothLeService() {
     }
@@ -113,7 +122,7 @@ public class BluetoothLeService extends Service {
     }
 
     public void startScanning() {
-        Log.i(TAG, "startScanning()");
+        Log.d(TAG, "startScanning()");
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -256,7 +265,13 @@ public class BluetoothLeService extends Service {
             for(byte b: data) {
                 stringBuilder.append(String.format("%02X ", b));
             }
+            float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
             intent.putExtra(EXTRA_DATA, data);
+            intent.putExtra(EXTRA_DATA_FLOAT, temp);
+            TemperatureChartFragment.TemperatureMeasurement temperatureMeasurement
+                    = new TemperatureChartFragment.TemperatureMeasurement(
+                    temp, SystemClock.uptimeMillis());
+            TemperatureChartFragment.temperatureMeasurements.add(temperatureMeasurement);
         }
 
         sendBroadcast(intent);
@@ -299,6 +314,8 @@ public class BluetoothLeService extends Service {
             final String action = intent.getAction();
 
             if(MainActivity.ACTION_START_SCAN.equals(action)) {
+                if(mBluetoothLeScanner == null)
+                    mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
                 if(mBluetoothAdapter.isEnabled())
                     startScanning();
             }

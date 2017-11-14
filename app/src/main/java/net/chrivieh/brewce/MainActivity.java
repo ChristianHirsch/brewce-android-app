@@ -23,6 +23,7 @@ import android.view.View;
 import layout.AutomaticControlFragment;
 import layout.ManualControlFragment;
 import layout.SettingsFragment;
+import layout.TemperatureChartFragment;
 import layout.TemperatureProfileControlFragment;
 
 public class MainActivity extends AppCompatActivity {
@@ -160,6 +161,8 @@ public class MainActivity extends AppCompatActivity {
                     return AutomaticControlFragment.newInstance();
                 case 2:
                     return TemperatureProfileControlFragment.newInstance();
+                case 3:
+                    return layout.TemperatureChartFragment.newInstance();
                 default:
                     return ManualControlFragment.newInstance();
 
@@ -168,8 +171,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public int getCount() {
-            // Show 3 total pages.
-            return 3;
+            // Show 4 total pages.
+            return 4;
         }
 
         @Override
@@ -180,7 +183,9 @@ public class MainActivity extends AppCompatActivity {
                 case 1:
                     return "Automatic Control";
                 case 2:
-                    return "Program Control";
+                    return "Profile Control";
+                case 3:
+                    return "Temperature Chart";
             }
             return null;
         }

@@ -9,11 +9,13 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.SystemClock;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import layout.AutomaticControlFragment;
+import layout.TemperatureChartFragment;
 
 public class TemperatureControlService extends Service {
 

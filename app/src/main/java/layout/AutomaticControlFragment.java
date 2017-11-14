@@ -134,8 +134,7 @@ public class AutomaticControlFragment extends Fragment {
                 tvTemp.setText("Disconnected");
             }
             else if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
-                float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                float temp = intent.getFloatExtra(BluetoothLeService.EXTRA_DATA_FLOAT, 0.0f);
                 tvTemp.setText(String.format("%3.1f°C", temp));
             }
             else if(TemperatureControlService.ACTION_CONTROL_EFFORT_CHANGED.equals(action)) {
