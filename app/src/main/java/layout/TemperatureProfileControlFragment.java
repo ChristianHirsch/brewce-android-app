@@ -303,6 +303,7 @@ public class TemperatureProfileControlFragment extends Fragment {
                 viewHolder = new ViewHolder();
                 viewHolder.tvTemperature = (TextView) view.findViewById(R.id.temperature_setpoint);
                 viewHolder.tvTime = (TextView) view.findViewById(R.id.temperature_time);
+                viewHolder.ivStatus = (ImageView) view.findViewById(R.id.iv_status);
                 view.setTag(viewHolder);
             }
             else {
