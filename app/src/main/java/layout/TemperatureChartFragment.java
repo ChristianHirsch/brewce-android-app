@@ -140,7 +140,7 @@ public class TemperatureChartFragment extends Fragment {
     private IntentFilter makeIntentFilter() {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        intentFilter.addAction(TemperatureControlService.);
+        //intentFilter.addAction(TemperatureControlService.);
         return intentFilter;
     }
 }
