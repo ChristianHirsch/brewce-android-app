@@ -33,6 +33,7 @@ public class TemperatureProfileControlService extends Service {
     private long mElapsed = 0;
     private int mTempProfileIdx = 0;
     private float targetTemp = 0.0f;
+    private float mLastMeasuredTemperature = 0.0f;
 
     private final IBinder mBinder = new LocalBinder();
 
@@ -53,24 +54,31 @@ public class TemperatureProfileControlService extends Service {
 
             TemperatureProfileData.Setpoint setpoint =
                     TemperatureProfileData.getSetpointOfIdx(mTempProfileIdx);
-            targetTemp = setpoint.temperature;
-            setpoint.time -= diff;
-            setpoint.status = TemperatureProfileData.Setpoint.Status.ACTIVE;
-            sendCounterChangedBroadcast();
 
             if(setpoint.time <= 0) {
                 setpoint.status = TemperatureProfileData.Setpoint.Status.FINISHED;
                 mTempProfileIdx++;
-                diff = setpoint.time;
                 if(mTempProfileIdx >= TemperatureProfileData.setpoints.size())
                 {
                     sendCounterExpiredBroadcast();
                     mTempProfileIdx = 0;
                     return;
                 }
+                setpoint =
+                        TemperatureProfileData.getSetpointOfIdx(mTempProfileIdx);
+                setpoint.status = TemperatureProfileData.Setpoint.Status.ACTIVE;
                 sendTemperatureChangedBroadcast(
                         TemperatureProfileData.getTemperatureOfIdx(mTempProfileIdx));
+
+                if(Math.abs(setpoint.temperature
+                        - mLastMeasuredTemperature) > 1.0f)
+                    return;
             }
+
+            targetTemp = setpoint.temperature;
+            setpoint.time -= diff;
+            setpoint.status = TemperatureProfileData.Setpoint.Status.ACTIVE;
+            sendCounterChangedBroadcast();
 
             mHandler.postDelayed(this, 250);
         }
@@ -113,13 +121,13 @@ public class TemperatureProfileControlService extends Service {
         public void onReceive(Context context, Intent intent) {
             if(intent.getAction().equals(BluetoothLeService.ACTION_DATA_AVAILABLE)) {
 
-                byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
-                float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                mLastMeasuredTemperature =
+                        intent.getFloatExtra(BluetoothLeService.EXTRA_DATA_FLOAT, 0.0f);
                 TemperatureProfileData.Setpoint setpoint =
                         TemperatureProfileData.getSetpointOfIdx(mTempProfileIdx);
                 targetTemp = setpoint.temperature;
 
-                if((Math.abs(targetTemp - temp) < 1.0f)) {
+                if((Math.abs(targetTemp - mLastMeasuredTemperature) <= 1.0f)) {
                     if(mRunning == false) {
                         mElapsed = SystemClock.uptimeMillis();
                         mHandler.post(r);

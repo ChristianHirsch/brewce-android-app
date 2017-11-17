@@ -67,6 +67,7 @@ public class TemperatureControlService extends Service {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED);
+        intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
         // register for updates from BluetoothLeService
         registerReceiver(mBroadcastReceiver,
                 new IntentFilter(intentFilter));
@@ -87,6 +88,8 @@ public class TemperatureControlService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        byte[] data = {0, 0};
+        mBluetoothLeService.write(data);
         unbindService(mServiceConnection);
         unregisterReceiver(mBroadcastReceiver);
     }
@@ -115,8 +118,8 @@ public class TemperatureControlService extends Service {
                 mPIDController.setSetpoint((float)targetTemp);
             }
             else if(intent.getAction().equals(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED)) {
-                int targetTemp = intent.getIntExtra(TemperatureProfileControlService.EXTRA_DATA, 0);
-                mPIDController.setSetpoint((float)targetTemp);
+                float targetTemp = intent.getFloatExtra(TemperatureProfileControlService.EXTRA_DATA, 0);
+                mPIDController.setSetpoint(targetTemp);
             }
         }
     };

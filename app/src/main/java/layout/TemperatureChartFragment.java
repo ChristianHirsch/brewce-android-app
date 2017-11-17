@@ -127,7 +127,7 @@ public class TemperatureChartFragment extends Fragment {
 
             if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
                 mTemperatureDataSet.notifyDataSetChanged();
-                mTemperatureTargetDataSet.notifyDataSetChanged();
+                //mTemperatureTargetDataSet.notifyDataSetChanged();
 
                 mTemperatureData.notifyDataChanged();
 

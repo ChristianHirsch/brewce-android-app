@@ -154,13 +154,17 @@ public class AutomaticControlFragment extends Fragment {
         tvPower = (TextView) view.findViewById(R.id.tvControlEffort);
         pbPower = (ProgressBar) view.findViewById(R.id.pbPower);
 
+        sbTargetTemp.setEnabled(false);
+
         tbStartStopp.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 if(b == true) {
+                    sbTargetTemp.setEnabled(true);
                     startAutomaticTemperatureControl();
                 }
                 else {
+                    sbTargetTemp.setEnabled(false);
                     stopAutomaticTemperatureControl();
                 }
             }
@@ -197,7 +201,5 @@ public class AutomaticControlFragment extends Fragment {
         getActivity().unbindService(mTemperatureControlServiceConnection);
         tvPower.setText("" + 0);
         pbPower.setProgress(0);
-        byte[] data = {0, 0};
-        mBluetoothLeService.write(data);
     }
 }
