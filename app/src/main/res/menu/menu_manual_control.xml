@@ -12,4 +12,9 @@
         android:orderInCategory="100"
         android:title="@string/action_settings"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_save_temperature_measurements"
+        android:orderInCategory="100"
+        android:title="@string/action_save_temperature_measurements"
+        app:showAsAction="never" />
 </menu>
