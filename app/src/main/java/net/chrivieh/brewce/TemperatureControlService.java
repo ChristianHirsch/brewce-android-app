@@ -10,6 +10,7 @@ import android.content.ServiceConnection;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -67,6 +68,7 @@ public class TemperatureControlService extends Service {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED);
+        intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
         // register for updates from BluetoothLeService
         registerReceiver(mBroadcastReceiver,
                 new IntentFilter(intentFilter));
@@ -111,12 +113,12 @@ public class TemperatureControlService extends Service {
                 sendBroadcast(actionIntent);
             }
             else if(intent.getAction().equals(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED)) {
-                int targetTemp = intent.getIntExtra(AutomaticControlFragment.EXTRA_DATA, 0);
-                mPIDController.setSetpoint((float)targetTemp);
+                float targetTemp = intent.getFloatExtra(AutomaticControlFragment.EXTRA_DATA, 0.0f);
+                mPIDController.setSetpoint(targetTemp);
             }
             else if(intent.getAction().equals(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED)) {
-                int targetTemp = intent.getIntExtra(TemperatureProfileControlService.EXTRA_DATA, 0);
-                mPIDController.setSetpoint((float)targetTemp);
+                float targetTemp = intent.getFloatExtra(TemperatureProfileControlService.EXTRA_DATA, 0.0f);
+                mPIDController.setSetpoint(targetTemp);
             }
         }
     };

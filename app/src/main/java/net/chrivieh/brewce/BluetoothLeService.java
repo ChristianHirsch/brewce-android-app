@@ -38,6 +38,9 @@ import layout.TemperatureChartFragment;
 public class BluetoothLeService extends Service {
     public static final String TAG = BluetoothLeService.class.getSimpleName();
 
+    public final UUID UUID_BEACON_BREWCE =
+            UUID.fromString("b5e9d1f2-cdb3-4758-a1b0-1d6ddd22dd0d");
+
     private final IBinder mBinder = new LocalBinder();
 
     private BluetoothManager mBluetoothManager;
@@ -65,10 +68,14 @@ public class BluetoothLeService extends Service {
             "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE =
             "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
+    public final static String ACTION_DATA_WRITE =
+            "com.example.bluetooth.le.ACTION_DATA_WRITE";
     public final static String EXTRA_DATA =
             "com.example.bluetooth.le.EXTRA_DATA";
     public final static String EXTRA_DATA_FLOAT =
             "com.example.bluetooth.le.EXTRA_DATA_FLOAT";
+    public final static String EXTRA_DATA_DEVICE_ADDRESS =
+            "com.example.bluetooth.le.EXTRA_DEVICE_ADDRESS";
 
     public BluetoothLeService() {
     }
@@ -123,12 +130,15 @@ public class BluetoothLeService extends Service {
 
     public void startScanning() {
         Log.d(TAG, "startScanning()");
+
+        /*
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 stopScanning();
             }
         }, SCAN_PERIOD);
+        */
 
         ScanSettings settings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
@@ -139,7 +149,6 @@ public class BluetoothLeService extends Service {
                 .build();
         List<ScanFilter> filters = new ArrayList<>();
         ScanFilter scanFilter = new ScanFilter.Builder()
-                .setDeviceName("brewce_cooker")
                 .build();
         filters.add(scanFilter);
 
@@ -178,7 +187,7 @@ public class BluetoothLeService extends Service {
                 Log.i(TAG, "Connected to GATT server.");
                 intentAction = ACTION_GATT_CONNECTED;
                 mConnectionState = STATE_CONNECTED;
-                broadcastUpdate(intentAction);
+                broadcastUpdate(intentAction, gatt.getDevice().getAddress());
                 mBluetoothGatt.discoverServices();
             }
             else if(newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -189,7 +198,7 @@ public class BluetoothLeService extends Service {
                     connect(mBluetoothGatt.getDevice());
                 }
                 mConnectionState = STATE_DISCONNECTED;
-                broadcastUpdate(intentAction);
+                broadcastUpdate(intentAction, gatt.getDevice().getAddress());
             } else {
                 Log.i(TAG, "Other error.");
             }
@@ -219,7 +228,7 @@ public class BluetoothLeService extends Service {
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
             if(status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, gatt.getDevice().getAddress());
             }
         }
 
@@ -232,7 +241,7 @@ public class BluetoothLeService extends Service {
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
-            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, gatt.getDevice().getAddress());
         }
     };
 
@@ -248,6 +257,8 @@ public class BluetoothLeService extends Service {
             return;
         mWriteCharacteristics.setValue(data);
         mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
+
+        broadcastWriteUpdate(ACTION_DATA_WRITE, mBluetoothGatt.getDevice().getAddress(), data);
     }
 
     private void broadcastUpdate(final String action) {
@@ -255,8 +266,22 @@ public class BluetoothLeService extends Service {
         sendBroadcast(intent);
     }
 
+    private void broadcastWriteUpdate(final String action,
+                                      final String deviceAddress,
+                                      byte[] data)
+    {
+        final Intent intent = new Intent(action);
+        intent.putExtra(EXTRA_DATA_DEVICE_ADDRESS, deviceAddress);
+        if(data[0] != 0)
+            intent.putExtra(EXTRA_DATA, (int)(data[1] & 0xFF));
+        else
+            intent.putExtra(EXTRA_DATA, (int)0);
+        sendBroadcast(intent);
+    }
+
     private void broadcastUpdate(final String action,
-                                 final BluetoothGattCharacteristic characteristic) {
+                                 final BluetoothGattCharacteristic characteristic,
+                                 final String deviceAddress) {
         final Intent intent = new Intent(action);
 
         final byte[] data = characteristic.getValue();
@@ -268,12 +293,21 @@ public class BluetoothLeService extends Service {
             float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
             intent.putExtra(EXTRA_DATA, data);
             intent.putExtra(EXTRA_DATA_FLOAT, temp);
+            intent.putExtra(EXTRA_DATA_DEVICE_ADDRESS, deviceAddress);
             TemperatureChartFragment.TemperatureMeasurement temperatureMeasurement
                     = new TemperatureChartFragment.TemperatureMeasurement(
                     temp, SystemClock.uptimeMillis());
             TemperatureChartFragment.temperatureMeasurements.add(temperatureMeasurement);
         }
 
+        sendBroadcast(intent);
+    }
+
+    private void broadcastUpdate(final String action,
+                                 final String deviceAddress)
+    {
+        final Intent intent = new Intent(action);
+        intent.putExtra(EXTRA_DATA_DEVICE_ADDRESS, deviceAddress);
         sendBroadcast(intent);
     }
 
@@ -284,6 +318,10 @@ public class BluetoothLeService extends Service {
             Log.i(TAG, "onScanResult(): "
                     + result.getDevice().getName()
                     + result.getDevice().getAddress() );
+
+            if(checkUuidOfResult(result) != true)
+                return;
+
             connect(result.getDevice());
             stopScanning();
         }
@@ -295,6 +333,10 @@ public class BluetoothLeService extends Service {
                 Log.i(TAG, "onBatchScanResult(): "
                         + result.getDevice().getName() + " | "
                         + result.getDevice().getAddress() );
+
+                if(checkUuidOfResult(result) != true)
+                    continue;
+
                 connect(result.getDevice());
                 stopScanning();
                 break;
@@ -326,5 +368,44 @@ public class BluetoothLeService extends Service {
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(MainActivity.ACTION_START_SCAN);
         return intentFilter;
+    }
+
+    private boolean checkUuidOfResult(ScanResult result) {
+        // https://github.com/kiteflo/iBeaconAndroidDemo
+        int startByte = 2;
+        boolean patternFound = false;
+        while(startByte < 6)
+        {
+            if(((int)result.getScanRecord().getBytes()[startByte + 2] & 0xff) == 0x02
+                    &&((int)result.getScanRecord().getBytes()[startByte + 3] & 0xff) == 0x15)
+            {
+                patternFound = true;
+                break;
+            }
+            startByte++;
+        }
+        if(!patternFound)
+            return false;
+
+        byte[] uuidBytes = new byte[16];
+        System.arraycopy(result.getScanRecord().getBytes(), startByte + 4, uuidBytes, 0, 16);
+
+        ByteBuffer bb = ByteBuffer.wrap(uuidBytes);
+        UUID uuid = new UUID(bb.getLong(), bb.getLong());
+        if(!uuid.equals(UUID_BEACON_BREWCE))
+            return false;
+
+        // major
+        final int major = (result.getScanRecord().getBytes()[startByte + 20] & 0xff) * 0x100 + (result.getScanRecord().getBytes()[startByte + 21] & 0xff);
+        // minor
+        final int minor = (result.getScanRecord().getBytes()[startByte + 22] & 0xff) * 0x100 + (result.getScanRecord().getBytes()[startByte + 23] & 0xff);
+
+        Log.i(TAG,"brewce iBeacon detected!");
+        Log.i(TAG,"UUID:  " + uuid.toString());
+        Log.i(TAG,"major: " + major);
+        Log.i(TAG,"minor: " + minor);
+        Log.i(TAG,"RSSI:  " + result.getRssi());
+
+        return true;
     }
 }

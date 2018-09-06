@@ -19,6 +19,7 @@ import android.widget.TextView;
 import android.widget.ToggleButton;
 
 import net.chrivieh.brewce.BluetoothLeService;
+import net.chrivieh.brewce.MqttGatewayService;
 import net.chrivieh.brewce.R;
 import net.chrivieh.brewce.TemperatureControlService;
 
@@ -36,6 +37,7 @@ public class AutomaticControlFragment extends Fragment {
 
     private TemperatureControlService mTemperatureControlService;
     private BluetoothLeService mBluetoothLeService;
+    private MqttGatewayService mMqttGatewayService;
 
     private TextView tvTemp;
     private TextView tvTargetTemp;
@@ -76,6 +78,10 @@ public class AutomaticControlFragment extends Fragment {
         getActivity().bindService(intent, mBluetoothLeServiceConnection,
                 Context.BIND_AUTO_CREATE);
 
+        intent = new Intent(getActivity(), MqttGatewayService.class);
+        getActivity().bindService(intent, mMqttGatewayServiceConnection,
+                Context.BIND_AUTO_CREATE);
+
         getActivity().registerReceiver(mBroadcastReceiver, makeUpdateIntentFilter());
     }
 
@@ -100,6 +106,19 @@ public class AutomaticControlFragment extends Fragment {
         }
     };
 
+    private ServiceConnection mMqttGatewayServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            mMqttGatewayService =
+                    ((MqttGatewayService.LocalBinder) iBinder).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            mMqttGatewayService = null;
+        }
+    };
+
     private ServiceConnection mTemperatureControlServiceConnection
             = new ServiceConnection() {
         @Override
@@ -107,7 +126,7 @@ public class AutomaticControlFragment extends Fragment {
             mTemperatureControlService =
                     ((TemperatureControlService.LocalBinder) iBinder).getService();
             final Intent intent = new Intent(ACTION_TARGET_TEMPERATURE_CHANGED);
-            intent.putExtra(EXTRA_DATA, sbTargetTemp.getProgress());
+            intent.putExtra(EXTRA_DATA, (float)sbTargetTemp.getProgress());
             getActivity().sendBroadcast(intent);
         }
 
@@ -180,7 +199,7 @@ public class AutomaticControlFragment extends Fragment {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 final Intent intent = new Intent(ACTION_TARGET_TEMPERATURE_CHANGED);
-                intent.putExtra(EXTRA_DATA, seekBar.getProgress());
+                intent.putExtra(EXTRA_DATA, (float)seekBar.getProgress());
                 getActivity().sendBroadcast(intent);
             }
         });
