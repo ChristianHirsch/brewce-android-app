@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Environment;
 import android.support.design.widget.TabLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -16,9 +17,22 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+
+import com.codetroopers.betterpickers.numberpicker.NumberPickerBuilder;
+import com.codetroopers.betterpickers.numberpicker.NumberPickerDialogFragment;
+import com.github.mikephil.charting.data.Entry;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 import layout.AutomaticControlFragment;
 import layout.ManualControlFragment;
@@ -43,8 +57,10 @@ public class MainActivity extends AppCompatActivity {
     private SectionsPagerAdapter mSectionsPagerAdapter;
 
     BluetoothLeService mBluetoothLeService = null;
-    private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
+
     private static final int PERMISSION_ENABLE_BT = 1;
+    private static final int PERMISSION_REQUEST_COARSE_LOCATION = 2;
+    private static final int PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE = 3;
 
     private boolean uiElementsInitialized = false;
 
@@ -124,9 +140,13 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         else if (id == R.id.action_settings) {
-            getFragmentManager().beginTransaction()
-                    .replace(android.R.id.content, new SettingsFragment())
-                    .commit();
+            showEditPIDValue();
+            return true;
+        }
+        else if (id == R.id.action_save_temperature_measurements) {
+            if(isExternalStorageWritable() == false)
+                Log.e(TAG, "error writing temperature measurements");
+            writeTemperatureMeasurementsToFile();
             return true;
         }
 
@@ -211,6 +231,106 @@ public class MainActivity extends AppCompatActivity {
                 PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
                     PERMISSION_REQUEST_COARSE_LOCATION);
+        }
+    }
+
+    private void showEditPIDValue()
+    {
+        final float kp = PIDController.getKp();
+        final float ki = PIDController.getKi();
+        final float kd = PIDController.getKd();
+
+        // kD
+        NumberPickerBuilder nbp = new NumberPickerBuilder()
+                .setFragmentManager(getSupportFragmentManager())
+                .setStyleResId(R.style.BetterPickersDialogFragment)
+                .setLabelText("Set kD.");
+        if(kp != 0.0f)
+            nbp.setCurrentNumber(BigDecimal.valueOf(kd));
+        nbp.addNumberPickerDialogHandler(new NumberPickerDialogFragment.NumberPickerDialogHandlerV2() {
+            @Override
+            public void onDialogNumberSet(int reference, BigInteger number, double decimal,
+                                          boolean isNegative, BigDecimal fullNumber) {
+                PIDController.setKd(fullNumber.floatValue());
+            }
+        });
+        nbp.show();
+
+        // kI
+        nbp = new NumberPickerBuilder()
+                .setFragmentManager(getSupportFragmentManager())
+                .setStyleResId(R.style.BetterPickersDialogFragment)
+                .setLabelText("Set kI.");
+        if(kp != 0.0f)
+            nbp.setCurrentNumber(BigDecimal.valueOf(ki));
+        nbp.addNumberPickerDialogHandler(new NumberPickerDialogFragment.NumberPickerDialogHandlerV2() {
+            @Override
+            public void onDialogNumberSet(int reference, BigInteger number, double decimal,
+                                          boolean isNegative, BigDecimal fullNumber) {
+                PIDController.setKi(fullNumber.floatValue());
+            }
+        });
+        nbp.show();
+
+        // kP
+        nbp = new NumberPickerBuilder()
+                .setFragmentManager(getSupportFragmentManager())
+                .setStyleResId(R.style.BetterPickersDialogFragment)
+                .setLabelText("Set kP.");
+        if(kp != 0.0f)
+            nbp.setCurrentNumber(BigDecimal.valueOf(kp));
+        nbp.addNumberPickerDialogHandler(new NumberPickerDialogFragment.NumberPickerDialogHandlerV2() {
+            @Override
+            public void onDialogNumberSet(int reference, BigInteger number, double decimal,
+                                          boolean isNegative, BigDecimal fullNumber) {
+                PIDController.setKp(fullNumber.floatValue());
+            }
+        });
+        nbp.show();
+    }
+
+    /* Checks if external storage is available for read and write */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    private void writeTemperatureMeasurementsToFile() {
+        if(isExternalStorageWritable() == false)
+            return;
+
+        // check if write external storage permissions are granted
+        if(this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+                PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    PERMISSION_REQUEST_WRITE_EXTERNAL_STORAGE);
+            return;
+        }
+
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS),
+                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar.getInstance().getTime())
+                    + "_brewce_data.csv");
+        try {
+            if(file.getParentFile().exists() == false)
+                file.getParentFile().mkdirs();
+            file.createNewFile();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+            bw.write("\"Time\", \"Temperature\"");
+            bw.newLine();
+            for(Entry tm :
+                    TemperatureChartFragment.temperatureMeasurements) {
+                tm.getX();
+                bw.write(String.format("%d" +
+                        ",%.3f", (int)tm.getX(), tm.getY()));
+                bw.newLine();
+            }
+            bw.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

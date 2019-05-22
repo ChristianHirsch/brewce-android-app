@@ -10,6 +10,7 @@
         android:required="true" />
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <!-- Permissions MQTT Requires -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />

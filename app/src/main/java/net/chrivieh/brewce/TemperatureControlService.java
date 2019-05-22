@@ -89,6 +89,8 @@ public class TemperatureControlService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        byte[] data = {0, 0};
+        mBluetoothLeService.write(data);
         unbindService(mServiceConnection);
         unregisterReceiver(mBroadcastReceiver);
     }

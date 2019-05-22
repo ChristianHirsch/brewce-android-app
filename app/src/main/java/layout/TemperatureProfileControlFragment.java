@@ -214,6 +214,7 @@ public class TemperatureProfileControlFragment extends Fragment {
             } else if(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED.equals(action)) {
                 float targetTemp = intent.getFloatExtra(
                         TemperatureProfileControlService.EXTRA_DATA, 0);
+                mAdapter.notifyDataSetChanged();
                 tvTargetTemp.setText(String.format("%3.1f°C", targetTemp));
             }
         }
