@@ -27,6 +27,8 @@ public class TemperatureProfileControlService extends Service {
             "net.chrivieh.brewce.TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED";
     public final static String EXTRA_DATA =
             "net.chrivieh.brewce.TemperatureProfileControlService.EXTRA_DATA";
+    public final static String EXTRA_DATA_TIME_OFFSET =
+            "net.chrivieh.brewce.TemperatureProfileControlService.EXTRA_DATA_TIME_OFFSET";
 
     final Handler mHandler = new Handler();
 
@@ -60,6 +62,8 @@ public class TemperatureProfileControlService extends Service {
 
             if(setpoint.time <= 0) {
                 setpoint.status = TemperatureProfileData.Setpoint.Status.FINISHED;
+                sendTemperatureChangedBroadcast(
+                        TemperatureProfileData.getTemperatureOfIdx(mTempProfileIdx), -100);
                 mTempProfileIdx++;
                 diff = setpoint.time;
                 if(mTempProfileIdx >= TemperatureProfileData.setpoints.size())
@@ -165,8 +169,13 @@ public class TemperatureProfileControlService extends Service {
     }
 
     private void sendTemperatureChangedBroadcast(float temp) {
+        sendTemperatureChangedBroadcast(temp, 0);
+    }
+
+    private void sendTemperatureChangedBroadcast(float temp, int timeOffset) {
         Intent intent = new Intent(ACTION_TARGET_TEMPERATURE_CHANGED);
         intent.putExtra(EXTRA_DATA, temp);
+        intent.putExtra(EXTRA_DATA_TIME_OFFSET, timeOffset);
         sendBroadcast(intent);
     }
 }

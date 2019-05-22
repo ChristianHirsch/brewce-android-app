@@ -12,4 +12,19 @@
         android:orderInCategory="100"
         android:title="@string/action_settings"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_set_kp"
+        android:orderInCategory="100"
+        android:title="@string/action_set_kp"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_set_ki"
+        android:orderInCategory="100"
+        android:title="@string/action_set_ki"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_set_kd"
+        android:orderInCategory="100"
+        android:title="@string/action_set_kd"
+        app:showAsAction="never" />
 </menu>

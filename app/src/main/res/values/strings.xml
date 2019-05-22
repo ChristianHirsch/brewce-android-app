@@ -2,6 +2,9 @@
     <string name="app_name">BrewCE</string>
     <string name="action_scan">Scan</string>
     <string name="action_settings">Settings</string>
+    <string name="action_set_kp">Set kP</string>
+    <string name="action_set_ki">Set kI</string>
+    <string name="action_set_kd">Set kD</string>
     <string name="section_format">Hello World from section: %1$d</string>
 
     <!-- TODO: Remove or change this placeholder text -->

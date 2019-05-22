@@ -38,9 +38,9 @@ public class MqttGatewayService extends Service {
 
     MqttAndroidClient mqttAndroidClient;
 
-    public final String MQTT_SERVER_URI = "MQTT_SERVER_URI";
-    public final String MQTT_CLIENT_ID  = "MQTT_CLIENT_ID";
-    public final String MQTT_CLIENT_ACCESS_TOKEN = "MQTT_CLIENT_ACCESS_TOKEN";
+    public static final String MQTT_SERVER_URI = "MQTT_SERVER_URI";
+    public static final String MQTT_CLIENT_ID  = "MQTT_CLIENT_ID";
+    public static final String MQTT_CLIENT_ACCESS_TOKEN = "MQTT_CLIENT_ACCESS_TOKEN";
 
     final String gatewayConnectTopic =
             "v1/gateway/connect";
@@ -67,20 +67,17 @@ public class MqttGatewayService extends Service {
     public void onCreate() {
         Log.d(TAG, "onCreate()");
 
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        connect();
 
-        if(!preferences.contains(MQTT_SERVER_URI))
-            openMqttServerUriSettingsDialog();
-        if(!preferences.contains(MQTT_CLIENT_ID))
-            openMqttClientIdSettingsDialog();
-        if(!preferences.contains(MQTT_CLIENT_ACCESS_TOKEN))
-            openMqttClientAccessTokenSettingsDialog();
+        registerReceiver(mBroadcastReceiver, makeIntentFilter());
+    }
+
+    private void connect() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         final String serverUri = preferences.getString(MQTT_SERVER_URI, "tcp://chirsch.dest-unreachable.net:1883");
         final String clientId  = preferences.getString(MQTT_CLIENT_ID, "") + System.currentTimeMillis();
         final String accessToken = preferences.getString(MQTT_CLIENT_ACCESS_TOKEN, "");
-
-        registerReceiver(mBroadcastReceiver, makeIntentFilter());
 
         mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), serverUri, clientId);
         mqttAndroidClient.setCallback(new MqttCallbackExtended() {
@@ -213,12 +210,20 @@ public class MqttGatewayService extends Service {
         }
     }
 
-    private void publishTemperatureSetpointTelemetryMessage(final String device, float temperature) {
+
+    private void publishTemperatureSetpointTelemetryMessage(final String device,
+                                                            final float temperature) {
+        publishTemperatureSetpointTelemetryMessage(device, temperature, 0);
+    }
+
+    private void publishTemperatureSetpointTelemetryMessage(final String device,
+                                                            final float temperature,
+                                                            final int timeOffset) {
         try {
             JSONObject data = new JSONObject();
             try {
                 data.put(device, new JSONArray().put(
-                        new JSONObject().put("ts", System.currentTimeMillis())
+                        new JSONObject().put("ts", System.currentTimeMillis() + timeOffset)
                                 .put("values", new JSONObject()
                                         .put("temperature_setpoint", temperature))
                 ));
@@ -311,10 +316,15 @@ public class MqttGatewayService extends Service {
                             intent.getFloatExtra(AutomaticControlFragment.EXTRA_DATA, 0.0f);
                     publishTemperatureSetpointTelemetryMessage(mDeviceAddress, setpointTemperature);
                     break;
+
                 case TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED:
                     setpointTemperature =
-                            intent.getFloatExtra(TemperatureProfileControlService.EXTRA_DATA, 0.0f);
-                    publishTemperatureSetpointTelemetryMessage(mDeviceAddress, setpointTemperature);
+                            intent.getFloatExtra(
+                                    TemperatureProfileControlService.EXTRA_DATA, 0.0f);
+                    int timeOffset = intent.getIntExtra(
+                            TemperatureProfileControlService.EXTRA_DATA_TIME_OFFSET, 0);
+                    publishTemperatureSetpointTelemetryMessage(
+                            mDeviceAddress, setpointTemperature, timeOffset);
                     break;
 
                 case BluetoothLeService.ACTION_DATA_WRITE:
@@ -337,95 +347,5 @@ public class MqttGatewayService extends Service {
         intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
 
         return intentFilter;
-    }
-
-    private void openMqttServerUriSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("MQTT Server URI");
-
-        // Set up the input
-        final EditText input = new EditText(this);
-        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
-
-        // Set up the buttons
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putString(MQTT_SERVER_URI, input.getText().toString()); // value to store
-                editor.apply();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
-    }
-
-    private void openMqttClientIdSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("MQTT Client ID");
-
-        // Set up the input
-        final EditText input = new EditText(this);
-        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
-
-        // Set up the buttons
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putString(MQTT_CLIENT_ID, input.getText().toString()); // value to store
-                editor.apply();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
-    }
-
-    private void openMqttClientAccessTokenSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("MQTT Client Access Token");
-
-        // Set up the input
-        final EditText input = new EditText(this);
-        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
-
-        // Set up the buttons
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putString(MQTT_CLIENT_ACCESS_TOKEN, input.getText().toString()); // value to store
-                editor.apply();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
     }
 }
