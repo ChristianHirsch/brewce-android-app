@@ -28,6 +28,7 @@ import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.MqttGatewayService;
 import net.chrivieh.brewce.PIDController;
 import net.chrivieh.brewce.R;
+import net.chrivieh.brewce.SensorNode;
 import net.chrivieh.brewce.TemperatureControlService;
 
 import java.math.BigDecimal;
@@ -147,8 +148,8 @@ public class AutomaticControlFragment extends Fragment {
 
     private static IntentFilter makeUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(SensorNode.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(SensorNode.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(TemperatureControlService.ACTION_CONTROL_EFFORT_CHANGED);
         return intentFilter;
     }
@@ -158,11 +159,11 @@ public class AutomaticControlFragment extends Fragment {
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
 
-            if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+            if(SensorNode.ACTION_GATT_DISCONNECTED.equals(action)) {
                 tvTemp.setText("Disconnected");
             }
-            else if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                float temp = intent.getFloatExtra(BluetoothLeService.EXTRA_DATA_FLOAT, 0.0f);
+            else if(SensorNode.ACTION_DATA_AVAILABLE.equals(action)) {
+                float temp = intent.getFloatExtra(SensorNode.EXTRA_DATA_FLOAT, 0.0f);
                 tvTemp.setText(String.format("%3.1f°C", temp));
             }
             else if(TemperatureControlService.ACTION_CONTROL_EFFORT_CHANGED.equals(action)) {

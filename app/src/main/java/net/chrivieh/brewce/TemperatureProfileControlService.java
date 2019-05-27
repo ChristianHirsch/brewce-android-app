@@ -119,10 +119,10 @@ public class TemperatureProfileControlService extends Service {
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if(intent.getAction().equals(BluetoothLeService.ACTION_DATA_AVAILABLE)) {
+            if(intent.getAction().equals(SensorNode.ACTION_DATA_AVAILABLE)) {
 
                 mLastMeasuredTemperature =
-                        intent.getFloatExtra(BluetoothLeService.EXTRA_DATA_FLOAT, 0.0f);
+                        intent.getFloatExtra(SensorNode.EXTRA_DATA_FLOAT, 0.0f);
                 TemperatureProfileData.Setpoint setpoint =
                         TemperatureProfileData.getSetpointOfIdx(mTempProfileIdx);
                 targetTemp = setpoint.temperature;
@@ -157,8 +157,8 @@ public class TemperatureProfileControlService extends Service {
 
     private static IntentFilter makeUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(SensorNode.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(SensorNode.ACTION_GATT_DISCONNECTED);
         return intentFilter;
     }
 

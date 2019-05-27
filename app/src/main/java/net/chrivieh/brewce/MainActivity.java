@@ -2,12 +2,16 @@ package net.chrivieh.brewce;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.design.widget.TabLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -17,10 +21,12 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 
 import com.codetroopers.betterpickers.numberpicker.NumberPickerBuilder;
 import com.codetroopers.betterpickers.numberpicker.NumberPickerDialogFragment;
@@ -45,6 +51,8 @@ public class MainActivity extends AppCompatActivity {
 
     public final static String ACTION_START_SCAN =
             "net.chrivieh.brewce.MainActivity.ACTION_START_SCAN";
+    public final static String ACTION_MQTT_CREDENTIALS_UPDATED =
+            "net.chrivieh.brewce.MainActivity.ACTION_MQTT_CREDENTIALS_UPDATED";
 
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
@@ -106,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         checkForBlePermissions();
+        askMqttCredentials();
     }
 
     @Override
@@ -211,6 +220,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void sendMqttCredentialsUpdatedBroadcast() {
+        Intent intent = new Intent(ACTION_MQTT_CREDENTIALS_UPDATED);
+        sendBroadcast(intent);
+    }
+
     private void sendStartBleScanBroadcast() {
         Intent intent = new Intent(ACTION_START_SCAN);
         sendBroadcast(intent);
@@ -298,6 +312,19 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
+    private void askMqttCredentials() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        if(!preferences.contains(MqttGatewayService.MQTT_CLIENT_ACCESS_TOKEN))
+            openMqttClientAccessTokenSettingsDialog();
+        if(!preferences.contains(MqttGatewayService.MQTT_CLIENT_ID))
+            openMqttClientIdSettingsDialog();
+        if(!preferences.contains(MqttGatewayService.MQTT_SERVER_URI))
+            openMqttServerUriSettingsDialog();
+
+        sendMqttCredentialsUpdatedBroadcast();
+    }
+
     private void writeTemperatureMeasurementsToFile() {
         if(isExternalStorageWritable() == false)
             return;
@@ -332,5 +359,95 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void openMqttServerUriSettingsDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("MQTT Server URI");
+
+        // Set up the input
+        final EditText input = new EditText(this);
+        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+
+        // Set up the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putString(MqttGatewayService.MQTT_SERVER_URI, input.getText().toString()); // value to store
+                editor.apply();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
+    }
+
+    private void openMqttClientIdSettingsDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("MQTT Client ID");
+
+        // Set up the input
+        final EditText input = new EditText(this);
+        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+
+        // Set up the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putString(MqttGatewayService.MQTT_CLIENT_ID, input.getText().toString()); // value to store
+                editor.apply();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
+    }
+
+    private void openMqttClientAccessTokenSettingsDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("MQTT Client Access Token");
+
+        // Set up the input
+        final EditText input = new EditText(this);
+        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+
+        // Set up the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putString(MqttGatewayService.MQTT_CLIENT_ACCESS_TOKEN, input.getText().toString()); // value to store
+                editor.apply();
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
     }
 }

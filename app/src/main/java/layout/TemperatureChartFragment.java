@@ -20,6 +20,7 @@ import com.github.mikephil.charting.data.LineDataSet;
 import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.MainActivity;
 import net.chrivieh.brewce.R;
+import net.chrivieh.brewce.SensorNode;
 import net.chrivieh.brewce.TemperatureControlService;
 
 import java.util.ArrayList;
@@ -125,7 +126,7 @@ public class TemperatureChartFragment extends Fragment {
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
 
-            if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+            if(SensorNode.ACTION_DATA_AVAILABLE.equals(action)) {
                 mTemperatureDataSet.notifyDataSetChanged();
                 //mTemperatureTargetDataSet.notifyDataSetChanged();
 
@@ -139,7 +140,7 @@ public class TemperatureChartFragment extends Fragment {
 
     private IntentFilter makeIntentFilter() {
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(SensorNode.ACTION_DATA_AVAILABLE);
         //intentFilter.addAction(TemperatureControlService.);
         return intentFilter;
     }

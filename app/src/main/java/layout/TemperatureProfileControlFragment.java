@@ -35,6 +35,7 @@ import com.codetroopers.betterpickers.numberpicker.NumberPickerDialogFragment;
 
 import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.R;
+import net.chrivieh.brewce.SensorNode;
 import net.chrivieh.brewce.TemperatureProfileControlService;
 import net.chrivieh.brewce.TemperatureProfileData;
 
@@ -185,8 +186,8 @@ public class TemperatureProfileControlFragment extends Fragment {
 
     private static IntentFilter makeUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(SensorNode.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(SensorNode.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_COUNTER_CHANGED);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_COUNTER_EXPIRED);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
@@ -198,11 +199,11 @@ public class TemperatureProfileControlFragment extends Fragment {
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
 
-            if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+            if(SensorNode.ACTION_GATT_DISCONNECTED.equals(action)) {
                 tvTemp.setText("Disconnected");
             }
-            else if(BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
+            else if(SensorNode.ACTION_DATA_AVAILABLE.equals(action)) {
+                byte data[] = intent.getByteArrayExtra(SensorNode.EXTRA_DATA);
                 float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
                 tvTemp.setText(String.format("%3.1f°C", temp));
             }

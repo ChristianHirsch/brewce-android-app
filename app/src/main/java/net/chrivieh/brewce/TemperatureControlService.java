@@ -66,7 +66,7 @@ public class TemperatureControlService extends Service {
         bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
 
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(SensorNode.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
         // register for updates from BluetoothLeService
@@ -98,10 +98,10 @@ public class TemperatureControlService extends Service {
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if(intent.getAction().equals(BluetoothLeService.ACTION_DATA_AVAILABLE)) {
-                byte data[] = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
+            if(intent.getAction().equals(SensorNode.ACTION_DATA_AVAILABLE)) {
+                byte data[] = intent.getByteArrayExtra(SensorNode.EXTRA_DATA);
                 float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
-                if(temp < -273.15f || temp > 120.0f)
+                if(temp < -273.15f || temp > 150.0f)
                     return;
 
                 float controlEffort = mPIDController.calcControlEffort(temp);

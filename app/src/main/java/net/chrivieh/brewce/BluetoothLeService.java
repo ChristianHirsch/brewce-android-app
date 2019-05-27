@@ -46,36 +46,13 @@ public class BluetoothLeService extends Service {
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
-    private BluetoothGatt mBluetoothGatt;
-    private BluetoothGattCharacteristic mWriteCharacteristics;
 
     private Handler mHandler;
 
-    private int mConnectionState = STATE_DISCONNECTED;
-
     private static final long SCAN_PERIOD = 15000;
 
-    private static final int STATE_DISCONNECTED = 0;
-    private static final int STATE_CONNECTING = 1;
-    private static final int STATE_CONNECTED = 2;
-    private static final int STATE_DISCONNECTING = 0;
-
-    public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
-    public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
-    public final static String ACTION_DATA_AVAILABLE =
-            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
-    public final static String ACTION_DATA_WRITE =
-            "com.example.bluetooth.le.ACTION_DATA_WRITE";
-    public final static String EXTRA_DATA =
-            "com.example.bluetooth.le.EXTRA_DATA";
-    public final static String EXTRA_DATA_FLOAT =
-            "com.example.bluetooth.le.EXTRA_DATA_FLOAT";
-    public final static String EXTRA_DATA_DEVICE_ADDRESS =
-            "com.example.bluetooth.le.EXTRA_DEVICE_ADDRESS";
+    private SensorNode mSensorNode;
+    private ActuatorNode mActuatorNode;
 
     public BluetoothLeService() {
     }
@@ -124,7 +101,10 @@ public class BluetoothLeService extends Service {
 
     @Override
     public boolean onUnbind(Intent intent) {
-        disconnect();
+        if(mSensorNode != null)
+            mSensorNode.disconnect();
+        if(mActuatorNode != null)
+            mActuatorNode.disconnect();
         return super.onUnbind(intent);
     }
 
@@ -160,155 +140,21 @@ public class BluetoothLeService extends Service {
         mBluetoothLeScanner.stopScan(mScanCallback);
     }
 
-    public void connect(BluetoothDevice device) {
-        if(mConnectionState != STATE_DISCONNECTED)
-            return;
-        Log.i(TAG, "Trying to connect to " + device.getAddress());
-        mBluetoothGatt = device.connectGatt(this, true, mGattCallback);
-        mConnectionState = STATE_CONNECTING;
-    }
-
-    public void disconnect() {
-        mConnectionState = STATE_DISCONNECTING;
-        mBluetoothGatt.disconnect();
-    }
-
-    public boolean isConnected() {
-        return mConnectionState == STATE_CONNECTED;
-    }
-
-    private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
-        @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            super.onConnectionStateChange(gatt, status, newState);
-
-            String intentAction;
-            if(newState == BluetoothProfile.STATE_CONNECTED) {
-                Log.i(TAG, "Connected to GATT server.");
-                intentAction = ACTION_GATT_CONNECTED;
-                mConnectionState = STATE_CONNECTED;
-                broadcastUpdate(intentAction, gatt.getDevice().getAddress());
-                mBluetoothGatt.discoverServices();
-            }
-            else if(newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.i(TAG, "Disconnected from GATT server.");
-                intentAction = ACTION_GATT_DISCONNECTED;
-                if(mConnectionState == STATE_CONNECTED) {
-                    Log.i(TAG, "Trying to reconnect.");
-                    connect(mBluetoothGatt.getDevice());
-                }
-                mConnectionState = STATE_DISCONNECTED;
-                broadcastUpdate(intentAction, gatt.getDevice().getAddress());
-            } else {
-                Log.i(TAG, "Other error.");
-            }
-        }
-
-        @Override
-        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            super.onServicesDiscovered(gatt, status);
-            if(status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
-                BluetoothGattService service =
-                        mBluetoothGatt.getService(UUID.fromString("0000fe84-0000-1000-8000-00805f9b34fb"));
-                mWriteCharacteristics =
-                        service.getCharacteristic(UUID.fromString("2d30c083-f39f-4ce6-923f-3484ea480596"));
-                BluetoothGattCharacteristic readChar =
-                        service.getCharacteristic(UUID.fromString("2d30c082-f39f-4ce6-923f-3484ea480596"));
-                BluetoothGattDescriptor desc = readChar.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"));
-                mBluetoothGatt.setCharacteristicNotification(readChar, true);
-                desc.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                mBluetoothGatt.writeDescriptor(desc);
-            } else {
-                Log.w(TAG, "onServicesDiscovered received: " + status);
-            }
-        }
-
-        @Override
-        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            super.onCharacteristicRead(gatt, characteristic, status);
-            if(status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, gatt.getDevice().getAddress());
-            }
-        }
-
-        @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            super.onCharacteristicWrite(gatt, characteristic, status);
-        }
-
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt,
-                                            BluetoothGattCharacteristic characteristic) {
-            super.onCharacteristicChanged(gatt, characteristic);
-            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, gatt.getDevice().getAddress());
-        }
-    };
-
-    public void writeUInt16(int data) {
-        if(mWriteCharacteristics == null)
-            return;
-        mWriteCharacteristics.setValue(data, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-        mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
-    }
-
     public void write(byte[] data) {
-        if(mWriteCharacteristics == null)
+        if(mActuatorNode == null)
             return;
-        mWriteCharacteristics.setValue(data);
-        mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
 
-        broadcastWriteUpdate(ACTION_DATA_WRITE, mBluetoothGatt.getDevice().getAddress(), data);
+        mActuatorNode.write(data);
     }
 
-    private void broadcastUpdate(final String action) {
-        final Intent intent = new Intent(action);
-        sendBroadcast(intent);
+    public ActuatorNode getActuatorNode() {
+        return mActuatorNode;
     }
 
-    private void broadcastWriteUpdate(final String action,
-                                      final String deviceAddress,
-                                      byte[] data)
-    {
-        final Intent intent = new Intent(action);
-        intent.putExtra(EXTRA_DATA_DEVICE_ADDRESS, deviceAddress);
-        if(data[0] != 0)
-            intent.putExtra(EXTRA_DATA, (int)(data[1] & 0xFF));
-        else
-            intent.putExtra(EXTRA_DATA, (int)0);
-        sendBroadcast(intent);
-    }
-
-    private void broadcastUpdate(final String action,
-                                 final BluetoothGattCharacteristic characteristic,
-                                 final String deviceAddress) {
-        final Intent intent = new Intent(action);
-
-        final byte[] data = characteristic.getValue();
-        if(data != null && data.length > 0) {
-            final StringBuilder stringBuilder = new StringBuilder();
-            for(byte b: data) {
-                stringBuilder.append(String.format("%02X ", b));
-            }
-            float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
-            intent.putExtra(EXTRA_DATA, data);
-            intent.putExtra(EXTRA_DATA_FLOAT, temp);
-            intent.putExtra(EXTRA_DATA_DEVICE_ADDRESS, deviceAddress);
-            TemperatureChartFragment.TemperatureMeasurement temperatureMeasurement
-                    = new TemperatureChartFragment.TemperatureMeasurement(
-                    temp, SystemClock.uptimeMillis());
-            TemperatureChartFragment.temperatureMeasurements.add(temperatureMeasurement);
-        }
-
-        sendBroadcast(intent);
-    }
-
-    private void broadcastUpdate(final String action,
-                                 final String deviceAddress)
-    {
-        final Intent intent = new Intent(action);
-        intent.putExtra(EXTRA_DATA_DEVICE_ADDRESS, deviceAddress);
-        sendBroadcast(intent);
+    public Boolean isActuatorNodeConnected() {
+        if(mActuatorNode == null)
+            return false;
+        return mActuatorNode.isConnected();
     }
 
     private ScanCallback mScanCallback = new ScanCallback() {
@@ -318,12 +164,6 @@ public class BluetoothLeService extends Service {
             Log.i(TAG, "onScanResult(): "
                     + result.getDevice().getName()
                     + result.getDevice().getAddress() );
-
-            if(checkUuidOfResult(result) != true)
-                return;
-
-            connect(result.getDevice());
-            stopScanning();
         }
 
         @Override
@@ -334,12 +174,23 @@ public class BluetoothLeService extends Service {
                         + result.getDevice().getName() + " | "
                         + result.getDevice().getAddress() );
 
-                if(checkUuidOfResult(result) != true)
+                int major = checkUuidOfResult(result);
+                if(major < 0)
                     continue;
 
-                connect(result.getDevice());
-                stopScanning();
-                break;
+                if(major == 1 && mActuatorNode == null) {
+                    mActuatorNode = new ActuatorNode(getBaseContext(), result.getDevice());
+                    mActuatorNode.connect();
+                }
+                else if(major == 2 && mSensorNode == null) {
+                    mSensorNode = new SensorNode(getBaseContext(), result.getDevice());
+                    mSensorNode.connect();
+                }
+
+                if(mSensorNode != null && mActuatorNode != null) {
+                    stopScanning();
+                    break;
+                }
             }
         }
 
@@ -370,8 +221,11 @@ public class BluetoothLeService extends Service {
         return intentFilter;
     }
 
-    private boolean checkUuidOfResult(ScanResult result) {
+    private int checkUuidOfResult(ScanResult result) {
         // https://github.com/kiteflo/iBeaconAndroidDemo
+        if(result.getScanRecord().getBytes().length < 26)
+            return -1;
+
         int startByte = 2;
         boolean patternFound = false;
         while(startByte < 6)
@@ -385,7 +239,7 @@ public class BluetoothLeService extends Service {
             startByte++;
         }
         if(!patternFound)
-            return false;
+            return -1;
 
         byte[] uuidBytes = new byte[16];
         System.arraycopy(result.getScanRecord().getBytes(), startByte + 4, uuidBytes, 0, 16);
@@ -393,7 +247,7 @@ public class BluetoothLeService extends Service {
         ByteBuffer bb = ByteBuffer.wrap(uuidBytes);
         UUID uuid = new UUID(bb.getLong(), bb.getLong());
         if(!uuid.equals(UUID_BEACON_BREWCE))
-            return false;
+            return -1;
 
         // major
         final int major = (result.getScanRecord().getBytes()[startByte + 20] & 0xff) * 0x100 + (result.getScanRecord().getBytes()[startByte + 21] & 0xff);
@@ -406,6 +260,6 @@ public class BluetoothLeService extends Service {
         Log.i(TAG,"minor: " + minor);
         Log.i(TAG,"RSSI:  " + result.getRssi());
 
-        return true;
+        return major;
     }
 }

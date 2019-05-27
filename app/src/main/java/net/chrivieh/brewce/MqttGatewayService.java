@@ -38,9 +38,9 @@ public class MqttGatewayService extends Service {
 
     MqttAndroidClient mqttAndroidClient;
 
-    public final String MQTT_SERVER_URI = "MQTT_SERVER_URI";
-    public final String MQTT_CLIENT_ID  = "MQTT_CLIENT_ID";
-    public final String MQTT_CLIENT_ACCESS_TOKEN = "MQTT_CLIENT_ACCESS_TOKEN";
+    public static final String MQTT_SERVER_URI = "MQTT_SERVER_URI";
+    public static final String MQTT_CLIENT_ID  = "MQTT_CLIENT_ID";
+    public static final String MQTT_CLIENT_ACCESS_TOKEN = "MQTT_CLIENT_ACCESS_TOKEN";
 
     final String gatewayConnectTopic =
             "v1/gateway/connect";
@@ -67,18 +67,24 @@ public class MqttGatewayService extends Service {
     public void onCreate() {
         Log.d(TAG, "onCreate()");
 
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        registerReceiver(mBroadcastReceiver, makeCredentialsIntentFilter());
 
-        if(!preferences.contains(MQTT_SERVER_URI))
-            openMqttServerUriSettingsDialog();
-        if(!preferences.contains(MQTT_CLIENT_ID))
-            openMqttClientIdSettingsDialog();
-        if(!preferences.contains(MQTT_CLIENT_ACCESS_TOKEN))
-            openMqttClientAccessTokenSettingsDialog();
+        connect();
+    }
+
+    private void connect() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         final String serverUri = preferences.getString(MQTT_SERVER_URI, "tcp://chirsch.dest-unreachable.net:1883");
         final String clientId  = preferences.getString(MQTT_CLIENT_ID, "") + System.currentTimeMillis();
         final String accessToken = preferences.getString(MQTT_CLIENT_ACCESS_TOKEN, "");
+
+        if(serverUri.length() == 0)
+            return;
+        if(clientId.length() == 0)
+            return;
+        if(accessToken.length() == 0)
+            return;
 
         registerReceiver(mBroadcastReceiver, makeIntentFilter());
 
@@ -138,6 +144,8 @@ public class MqttGatewayService extends Service {
         }
     }
 
+
+
     private void subscribeToTopics() {
         try {
             mqttAndroidClient.subscribe( mqttTopics, mqttTopicQos, null, new IMqttActionListener() {
@@ -168,6 +176,7 @@ public class MqttGatewayService extends Service {
             }
             MqttMessage mqttMessage = new MqttMessage();
             mqttMessage.setPayload(data.toString().getBytes());
+            Log.d(TAG, data.toString());
             mqttAndroidClient.publish( gatewayConnectTopic, mqttMessage);
         } catch (MqttException ex) {
             Log.e(TAG, "Exception in publishMessage()");
@@ -206,6 +215,7 @@ public class MqttGatewayService extends Service {
             }
             MqttMessage mqttMessage = new MqttMessage();
             mqttMessage.setPayload(data.toString().getBytes());
+            Log.d(TAG, data.toString());
             mqttAndroidClient.publish( gatewayTelemetryTopic, mqttMessage);
         } catch (/*Mqtt*/Exception ex) {
             Log.e(TAG, "Exception in publishTelemetryMessage()");
@@ -287,22 +297,51 @@ public class MqttGatewayService extends Service {
 
             switch (action)
             {
-                case BluetoothLeService.ACTION_GATT_CONNECTED:
+                case MainActivity.ACTION_MQTT_CREDENTIALS_UPDATED:
+                    connect();
+                    break;
+
+                case ActuatorNode.ACTION_GATT_CONNECTED:
                     mDeviceAddress =
-                            intent.getStringExtra(BluetoothLeService.EXTRA_DATA_DEVICE_ADDRESS);
+                            intent.getStringExtra(ActuatorNode.EXTRA_DATA_DEVICE_ADDRESS);
                     publishConnectMessage(mDeviceAddress);
                     break;
 
-                case BluetoothLeService.ACTION_DATA_AVAILABLE:
-                    float temp = intent.getFloatExtra(BluetoothLeService.EXTRA_DATA_FLOAT, 0.0f);
+                case ActuatorNode.ACTION_DATA_AVAILABLE:
+                    float temp = intent.getFloatExtra(ActuatorNode.EXTRA_DATA_FLOAT, 0.0f);
                     publishTemperatureAsTelemetryMessage(
-                            intent.getStringExtra(BluetoothLeService.EXTRA_DATA_DEVICE_ADDRESS),
+                            intent.getStringExtra(ActuatorNode.EXTRA_DATA_DEVICE_ADDRESS),
                             temp);
                     break;
 
-                case BluetoothLeService.ACTION_GATT_DISCONNECTED:
+                case ActuatorNode.ACTION_DATA_WRITE:
+                    int controlEffort = intent.getIntExtra(ActuatorNode.EXTRA_DATA, 0);
+                    int power = Math.round(((3500/250) * controlEffort) / 100);
+                    publishPowerTelemetryMessage(mDeviceAddress, power * 100);
+                    break;
+
+                case ActuatorNode.ACTION_GATT_DISCONNECTED:
                     mDeviceAddress =
-                            intent.getStringExtra(BluetoothLeService.EXTRA_DATA_DEVICE_ADDRESS);
+                            intent.getStringExtra(ActuatorNode.EXTRA_DATA_DEVICE_ADDRESS);
+                    publishDisconnectMessage(mDeviceAddress);
+                    break;
+
+                case SensorNode.ACTION_GATT_CONNECTED:
+                    mDeviceAddress =
+                            intent.getStringExtra(SensorNode.EXTRA_DATA_DEVICE_ADDRESS);
+                    publishConnectMessage(mDeviceAddress);
+                    break;
+
+                case SensorNode.ACTION_DATA_AVAILABLE:
+                    temp = intent.getFloatExtra(SensorNode.EXTRA_DATA_FLOAT, 0.0f);
+                    publishTemperatureAsTelemetryMessage(
+                            intent.getStringExtra(SensorNode.EXTRA_DATA_DEVICE_ADDRESS),
+                            temp);
+                    break;
+
+                case SensorNode.ACTION_GATT_DISCONNECTED:
+                    mDeviceAddress =
+                            intent.getStringExtra(SensorNode.EXTRA_DATA_DEVICE_ADDRESS);
                     publishDisconnectMessage(mDeviceAddress);
                     break;
 
@@ -316,22 +355,21 @@ public class MqttGatewayService extends Service {
                             intent.getFloatExtra(TemperatureProfileControlService.EXTRA_DATA, 0.0f);
                     publishTemperatureSetpointTelemetryMessage(mDeviceAddress, setpointTemperature);
                     break;
-
-                case BluetoothLeService.ACTION_DATA_WRITE:
-                    int controlEffort = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
-                    int power = Math.round(((3500/250) * controlEffort) / 100);
-                    publishPowerTelemetryMessage(mDeviceAddress, power * 100);
-                    break;
             }
         }
     };
 
     private IntentFilter makeIntentFilter() {
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        intentFilter.addAction(BluetoothLeService.ACTION_DATA_WRITE);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+
+        intentFilter.addAction(ActuatorNode.ACTION_GATT_CONNECTED);
+        intentFilter.addAction(ActuatorNode.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(ActuatorNode.ACTION_DATA_WRITE);
+        intentFilter.addAction(ActuatorNode.ACTION_GATT_DISCONNECTED);
+
+        intentFilter.addAction(SensorNode.ACTION_GATT_CONNECTED);
+        intentFilter.addAction(SensorNode.ACTION_DATA_AVAILABLE);
+        intentFilter.addAction(SensorNode.ACTION_GATT_DISCONNECTED);
 
         intentFilter.addAction(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
@@ -339,93 +377,9 @@ public class MqttGatewayService extends Service {
         return intentFilter;
     }
 
-    private void openMqttServerUriSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("MQTT Server URI");
-
-        // Set up the input
-        final EditText input = new EditText(this);
-        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
-
-        // Set up the buttons
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putString(MQTT_SERVER_URI, input.getText().toString()); // value to store
-                editor.apply();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
-    }
-
-    private void openMqttClientIdSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("MQTT Client ID");
-
-        // Set up the input
-        final EditText input = new EditText(this);
-        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
-
-        // Set up the buttons
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putString(MQTT_CLIENT_ID, input.getText().toString()); // value to store
-                editor.apply();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
-    }
-
-    private void openMqttClientAccessTokenSettingsDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("MQTT Client Access Token");
-
-        // Set up the input
-        final EditText input = new EditText(this);
-        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
-
-        // Set up the buttons
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-                SharedPreferences.Editor editor = preferences.edit();
-                editor.putString(MQTT_CLIENT_ACCESS_TOKEN, input.getText().toString()); // value to store
-                editor.apply();
-            }
-        });
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
+    private IntentFilter makeCredentialsIntentFilter() {
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(MainActivity.ACTION_MQTT_CREDENTIALS_UPDATED);
+        return intentFilter;
     }
 }

@@ -17,8 +17,11 @@ import android.widget.CompoundButton;
 import android.widget.SeekBar;
 import android.widget.ToggleButton;
 
+import net.chrivieh.brewce.ActuatorNode;
 import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.R;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -76,8 +79,8 @@ public class ManualControlFragment extends Fragment {
         super.onResume();
         if(mBluetoothLeService == null)
             return;
-        tbOnOff.setEnabled(mBluetoothLeService.isConnected());
-        sbPower.setEnabled(mBluetoothLeService.isConnected());
+        tbOnOff.setEnabled(mBluetoothLeService.isActuatorNodeConnected());
+        sbPower.setEnabled(mBluetoothLeService.isActuatorNodeConnected());
     }
 
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
@@ -85,10 +88,10 @@ public class ManualControlFragment extends Fragment {
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
 
-            if(BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
+            if(ActuatorNode.ACTION_GATT_CONNECTED.equals(action)) {
                 tbOnOff.setEnabled(true);
                 sbPower.setEnabled(true);
-            } else if(BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+            } else if(ActuatorNode.ACTION_GATT_DISCONNECTED.equals(action)) {
                 tbOnOff.setEnabled(false);
                 sbPower.setEnabled(false);
             }
@@ -100,8 +103,8 @@ public class ManualControlFragment extends Fragment {
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             mBluetoothLeService =
                     ((BluetoothLeService.LocalBinder) iBinder).getService();
-            tbOnOff.setEnabled(mBluetoothLeService.isConnected());
-            sbPower.setEnabled(mBluetoothLeService.isConnected());
+            tbOnOff.setEnabled(mBluetoothLeService.isActuatorNodeConnected());
+            sbPower.setEnabled(mBluetoothLeService.isActuatorNodeConnected());
         }
 
         @Override
@@ -112,8 +115,8 @@ public class ManualControlFragment extends Fragment {
 
     private static IntentFilter makeGattUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        intentFilter.addAction(ActuatorNode.ACTION_GATT_CONNECTED);
+        intentFilter.addAction(ActuatorNode.ACTION_GATT_DISCONNECTED);
         return intentFilter;
     }
 
