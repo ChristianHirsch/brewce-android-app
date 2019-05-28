@@ -33,7 +33,6 @@ import com.codetroopers.betterpickers.hmspicker.HmsPickerDialogFragment;
 import com.codetroopers.betterpickers.numberpicker.NumberPickerBuilder;
 import com.codetroopers.betterpickers.numberpicker.NumberPickerDialogFragment;
 
-import net.chrivieh.brewce.BluetoothLeService;
 import net.chrivieh.brewce.R;
 import net.chrivieh.brewce.SensorNode;
 import net.chrivieh.brewce.TemperatureProfileControlService;

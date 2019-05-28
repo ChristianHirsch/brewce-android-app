@@ -12,20 +12,15 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 
-import net.chrivieh.brewce.BluetoothLeService;
-import net.chrivieh.brewce.MainActivity;
 import net.chrivieh.brewce.R;
 import net.chrivieh.brewce.SensorNode;
-import net.chrivieh.brewce.TemperatureControlService;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A simple {@link Fragment} subclass.

@@ -9,14 +9,11 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Binder;
 import android.os.IBinder;
-import android.os.SystemClock;
-import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import layout.AutomaticControlFragment;
-import layout.TemperatureChartFragment;
 
 public class TemperatureControlService extends Service {
 
@@ -35,7 +32,7 @@ public class TemperatureControlService extends Service {
     public final static String EXTRA_DATA =
             "net.chrivieh.brewce.TemperatureControlService.EXTRA_DATA";
 
-    private BluetoothLeService mBluetoothLeService;
+    private NodeScannerService mNodeScannerService;
 
     private PIDController mPIDController;
 
@@ -61,15 +58,15 @@ public class TemperatureControlService extends Service {
 
     @Override
     public void onCreate() {
-        // bind to BluetoothLeService
-        Intent intent = new Intent(this, BluetoothLeService.class);
+        // bind to NodeScannerService
+        Intent intent = new Intent(this, NodeScannerService.class);
         bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(SensorNode.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
-        // register for updates from BluetoothLeService
+        // register for updates from NodeScannerService
         registerReceiver(mBroadcastReceiver,
                 new IntentFilter(intentFilter));
     }
@@ -77,12 +74,12 @@ public class TemperatureControlService extends Service {
     final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            mBluetoothLeService = ((BluetoothLeService.LocalBinder) iBinder).getService();
+            mNodeScannerService = ((NodeScannerService.LocalBinder) iBinder).getService();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            mBluetoothLeService = null;
+            mNodeScannerService = null;
         }
     };
 
@@ -90,7 +87,7 @@ public class TemperatureControlService extends Service {
     public void onDestroy() {
         super.onDestroy();
         byte[] data = {0, 0};
-        mBluetoothLeService.write(data);
+        mNodeScannerService.write(data);
         unbindService(mServiceConnection);
         unregisterReceiver(mBroadcastReceiver);
     }
@@ -108,7 +105,7 @@ public class TemperatureControlService extends Service {
 
                 byte[] wData = {0x02, 0x00};
                 wData[1] = (byte) controlEffort;
-                mBluetoothLeService.write(wData);
+                mNodeScannerService.write(wData);
 
                 Intent actionIntent = new Intent(ACTION_CONTROL_EFFORT_CHANGED);
                 actionIntent.putExtra(EXTRA_DATA, (int)(Math.round(controlEffort)));

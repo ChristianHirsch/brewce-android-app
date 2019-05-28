@@ -9,7 +9,6 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,22 +18,11 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
-import com.codetroopers.betterpickers.hmspicker.HmsPickerBuilder;
-import com.codetroopers.betterpickers.hmspicker.HmsPickerDialogFragment;
-import com.codetroopers.betterpickers.numberpicker.NumberPickerBuilder;
-import com.codetroopers.betterpickers.numberpicker.NumberPickerDialogFragment;
-
-import net.chrivieh.brewce.BluetoothLeService;
+import net.chrivieh.brewce.NodeScannerService;
 import net.chrivieh.brewce.MqttGatewayService;
-import net.chrivieh.brewce.PIDController;
 import net.chrivieh.brewce.R;
 import net.chrivieh.brewce.SensorNode;
 import net.chrivieh.brewce.TemperatureControlService;
-
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -46,7 +34,7 @@ public class AutomaticControlFragment extends Fragment {
     public final static String TAG = AutomaticControlFragment.class.getSimpleName();
 
     private TemperatureControlService mTemperatureControlService;
-    private BluetoothLeService mBluetoothLeService;
+    private NodeScannerService mNodeScannerService;
     private MqttGatewayService mMqttGatewayService;
 
     private TextView tvTemp;
@@ -84,7 +72,7 @@ public class AutomaticControlFragment extends Fragment {
         if (getArguments() != null) {
         }
 
-        Intent intent = new Intent(getActivity(), BluetoothLeService.class);
+        Intent intent = new Intent(getActivity(), NodeScannerService.class);
         getActivity().bindService(intent, mBluetoothLeServiceConnection,
                 Context.BIND_AUTO_CREATE);
 
@@ -106,13 +94,13 @@ public class AutomaticControlFragment extends Fragment {
     private ServiceConnection mBluetoothLeServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            mBluetoothLeService =
-                    ((BluetoothLeService.LocalBinder) iBinder).getService();
+            mNodeScannerService =
+                    ((NodeScannerService.LocalBinder) iBinder).getService();
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            mBluetoothLeService = null;
+            mNodeScannerService = null;
         }
     };
 

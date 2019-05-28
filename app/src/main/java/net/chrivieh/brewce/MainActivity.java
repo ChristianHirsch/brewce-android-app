@@ -42,7 +42,6 @@ import java.util.Calendar;
 
 import layout.AutomaticControlFragment;
 import layout.ManualControlFragment;
-import layout.SettingsFragment;
 import layout.TemperatureChartFragment;
 import layout.TemperatureProfileControlFragment;
 
@@ -64,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private SectionsPagerAdapter mSectionsPagerAdapter;
 
-    BluetoothLeService mBluetoothLeService = null;
+    NodeScannerService mNodeScannerService = null;
 
     private static final int PERMISSION_ENABLE_BT = 1;
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 2;

@@ -2,14 +2,7 @@ package net.chrivieh.brewce;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
@@ -22,21 +15,15 @@ import android.content.IntentFilter;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.SystemClock;
 import android.util.Log;
 
-import com.github.mikephil.charting.data.Entry;
-
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import layout.TemperatureChartFragment;
-
-public class BluetoothLeService extends Service {
-    public static final String TAG = BluetoothLeService.class.getSimpleName();
+public class NodeScannerService extends Service {
+    public static final String TAG = NodeScannerService.class.getSimpleName();
 
     public final UUID UUID_BEACON_BREWCE =
             UUID.fromString("b5e9d1f2-cdb3-4758-a1b0-1d6ddd22dd0d");
@@ -54,7 +41,7 @@ public class BluetoothLeService extends Service {
     private SensorNode mSensorNode;
     private ActuatorNode mActuatorNode;
 
-    public BluetoothLeService() {
+    public NodeScannerService() {
     }
 
     @Override
@@ -94,8 +81,8 @@ public class BluetoothLeService extends Service {
     }
 
     public class LocalBinder extends Binder {
-        public BluetoothLeService getService() {
-            return BluetoothLeService.this;
+        public NodeScannerService getService() {
+            return NodeScannerService.this;
         }
     }
 

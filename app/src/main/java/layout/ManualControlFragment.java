@@ -18,10 +18,8 @@ import android.widget.SeekBar;
 import android.widget.ToggleButton;
 
 import net.chrivieh.brewce.ActuatorNode;
-import net.chrivieh.brewce.BluetoothLeService;
+import net.chrivieh.brewce.NodeScannerService;
 import net.chrivieh.brewce.R;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -30,7 +28,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class ManualControlFragment extends Fragment {
 
-    private BluetoothLeService mBluetoothLeService;
+    private NodeScannerService mNodeScannerService;
 
     private ToggleButton tbOnOff;
     private SeekBar sbPower;
@@ -58,7 +56,7 @@ public class ManualControlFragment extends Fragment {
         if (getArguments() != null) {
         }
 
-        Intent intent = new Intent(getActivity(), BluetoothLeService.class);
+        Intent intent = new Intent(getActivity(), NodeScannerService.class);
         getActivity().bindService(intent, mBluetoothLeServiceConnection,
                 Context.BIND_AUTO_CREATE);
 
@@ -77,10 +75,10 @@ public class ManualControlFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        if(mBluetoothLeService == null)
+        if(mNodeScannerService == null)
             return;
-        tbOnOff.setEnabled(mBluetoothLeService.isActuatorNodeConnected());
-        sbPower.setEnabled(mBluetoothLeService.isActuatorNodeConnected());
+        tbOnOff.setEnabled(mNodeScannerService.isActuatorNodeConnected());
+        sbPower.setEnabled(mNodeScannerService.isActuatorNodeConnected());
     }
 
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
@@ -101,15 +99,15 @@ public class ManualControlFragment extends Fragment {
     private ServiceConnection mBluetoothLeServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            mBluetoothLeService =
-                    ((BluetoothLeService.LocalBinder) iBinder).getService();
-            tbOnOff.setEnabled(mBluetoothLeService.isActuatorNodeConnected());
-            sbPower.setEnabled(mBluetoothLeService.isActuatorNodeConnected());
+            mNodeScannerService =
+                    ((NodeScannerService.LocalBinder) iBinder).getService();
+            tbOnOff.setEnabled(mNodeScannerService.isActuatorNodeConnected());
+            sbPower.setEnabled(mNodeScannerService.isActuatorNodeConnected());
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            mBluetoothLeService = null;
+            mNodeScannerService = null;
         }
     };
 
@@ -135,7 +133,7 @@ public class ManualControlFragment extends Fragment {
                     data[0] = 0x00;
                 }
                 data[1] = (byte) sbPower.getProgress();
-                mBluetoothLeService.write(data);
+                mNodeScannerService.write(data);
             }
         });
 
@@ -159,7 +157,7 @@ public class ManualControlFragment extends Fragment {
                 else
                     data[0] = 0x00;
                 data[1] = (byte) seekBar.getProgress();
-                mBluetoothLeService.write(data);
+                mNodeScannerService.write(data);
             }
         });
 

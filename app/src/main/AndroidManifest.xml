@@ -36,7 +36,7 @@
         </activity>
 
         <service
-            android:name=".BluetoothLeService"
+            android:name=".NodeScannerService"
             android:enabled="true"
             android:exported="true" />
         <service
