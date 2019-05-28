@@ -42,6 +42,8 @@ public class MqttGatewayService extends Service {
     public static final String MQTT_CLIENT_ID  = "MQTT_CLIENT_ID";
     public static final String MQTT_CLIENT_ACCESS_TOKEN = "MQTT_CLIENT_ACCESS_TOKEN";
 
+    private String mClientId;
+
     final String gatewayConnectTopic =
             "v1/gateway/connect";
     final String gatewayDisconnectTopic =
@@ -61,8 +63,6 @@ public class MqttGatewayService extends Service {
             0, 0
     };
 
-    private String mDeviceAddress = null;
-
     @Override
     public void onCreate() {
         Log.d(TAG, "onCreate()");
@@ -76,23 +76,24 @@ public class MqttGatewayService extends Service {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         final String serverUri = preferences.getString(MQTT_SERVER_URI, "tcp://chirsch.dest-unreachable.net:1883");
-        final String clientId  = preferences.getString(MQTT_CLIENT_ID, "") + System.currentTimeMillis();
+        mClientId  = preferences.getString(MQTT_CLIENT_ID, "");
         final String accessToken = preferences.getString(MQTT_CLIENT_ACCESS_TOKEN, "");
 
         if(serverUri.length() == 0)
             return;
-        if(clientId.length() == 0)
+        if(mClientId.length() == 0)
             return;
         if(accessToken.length() == 0)
             return;
 
         registerReceiver(mBroadcastReceiver, makeIntentFilter());
 
-        mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), serverUri, clientId);
+        mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), serverUri, mClientId);
         mqttAndroidClient.setCallback(new MqttCallbackExtended() {
             @Override
             public void connectComplete(boolean reconnect, String serverURI) {
                 Log.i(TAG, "MqttCallbackExtend.connectComplete(" + reconnect + ", ...)");
+                publishConnectMessage(mClientId);
             }
 
             @Override
@@ -268,8 +269,8 @@ public class MqttGatewayService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if(mDeviceAddress != null)
-            publishDisconnectMessage(mDeviceAddress);
+        /* TODO disconnect ALL devices */
+        publishDisconnectMessage(mClientId);
         unregisterReceiver(mBroadcastReceiver);
     }
 
@@ -302,9 +303,8 @@ public class MqttGatewayService extends Service {
                     break;
 
                 case ActuatorNode.ACTION_GATT_CONNECTED:
-                    mDeviceAddress =
-                            intent.getStringExtra(ActuatorNode.EXTRA_DATA_DEVICE_ADDRESS);
-                    publishConnectMessage(mDeviceAddress);
+                    publishConnectMessage(
+                            intent.getStringExtra(ActuatorNode.EXTRA_DATA_DEVICE_ADDRESS));
                     break;
 
                 case ActuatorNode.ACTION_DATA_AVAILABLE:
@@ -317,19 +317,19 @@ public class MqttGatewayService extends Service {
                 case ActuatorNode.ACTION_DATA_WRITE:
                     int controlEffort = intent.getIntExtra(ActuatorNode.EXTRA_DATA, 0);
                     int power = Math.round(((3500/250) * controlEffort) / 100);
-                    publishPowerTelemetryMessage(mDeviceAddress, power * 100);
+                    publishPowerTelemetryMessage(
+                            intent.getStringExtra(ActuatorNode.EXTRA_DATA_DEVICE_ADDRESS),
+                            power * 100);
                     break;
 
                 case ActuatorNode.ACTION_GATT_DISCONNECTED:
-                    mDeviceAddress =
-                            intent.getStringExtra(ActuatorNode.EXTRA_DATA_DEVICE_ADDRESS);
-                    publishDisconnectMessage(mDeviceAddress);
+                    publishDisconnectMessage(
+                            intent.getStringExtra(ActuatorNode.EXTRA_DATA_DEVICE_ADDRESS));
                     break;
 
                 case SensorNode.ACTION_GATT_CONNECTED:
-                    mDeviceAddress =
-                            intent.getStringExtra(SensorNode.EXTRA_DATA_DEVICE_ADDRESS);
-                    publishConnectMessage(mDeviceAddress);
+                    publishConnectMessage(
+                            intent.getStringExtra(SensorNode.EXTRA_DATA_DEVICE_ADDRESS));
                     break;
 
                 case SensorNode.ACTION_DATA_AVAILABLE:
@@ -340,20 +340,19 @@ public class MqttGatewayService extends Service {
                     break;
 
                 case SensorNode.ACTION_GATT_DISCONNECTED:
-                    mDeviceAddress =
-                            intent.getStringExtra(SensorNode.EXTRA_DATA_DEVICE_ADDRESS);
-                    publishDisconnectMessage(mDeviceAddress);
+                    publishDisconnectMessage(
+                            intent.getStringExtra(SensorNode.EXTRA_DATA_DEVICE_ADDRESS));
                     break;
 
                 case AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED:
                     float setpointTemperature =
                             intent.getFloatExtra(AutomaticControlFragment.EXTRA_DATA, 0.0f);
-                    publishTemperatureSetpointTelemetryMessage(mDeviceAddress, setpointTemperature);
+                    publishTemperatureSetpointTelemetryMessage(mClientId, setpointTemperature);
                     break;
                 case TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED:
                     setpointTemperature =
                             intent.getFloatExtra(TemperatureProfileControlService.EXTRA_DATA, 0.0f);
-                    publishTemperatureSetpointTelemetryMessage(mDeviceAddress, setpointTemperature);
+                    publishTemperatureSetpointTelemetryMessage(mClientId, setpointTemperature);
                     break;
             }
         }

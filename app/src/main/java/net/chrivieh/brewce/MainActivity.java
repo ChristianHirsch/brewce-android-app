@@ -367,6 +367,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Set up the input
         final EditText input = new EditText(this);
+        input.setText("tcp://example.com:1883");
         // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         builder.setView(input);
@@ -397,6 +398,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Set up the input
         final EditText input = new EditText(this);
+        input.setText("brewce_" + System.currentTimeMillis());
         // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         builder.setView(input);
