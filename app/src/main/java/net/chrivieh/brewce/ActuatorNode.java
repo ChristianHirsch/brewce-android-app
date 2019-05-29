@@ -22,7 +22,7 @@ public class ActuatorNode {
 
     private Context mContext;
 
-    public static final String TAG = SensorNode.class.getSimpleName();
+    public static final String TAG = ActuatorNode.class.getSimpleName();
 
     public final static String ACTION_GATT_CONNECTED =
             "net.chrivieh.brewce.ActuatorNode.ACTION_GATT_CONNECTED";
@@ -202,6 +202,7 @@ public class ActuatorNode {
         mWriteCharacteristics.setValue(data);
         mBluetoothGatt.writeCharacteristic(mWriteCharacteristics);
 
-        broadcastWriteUpdate(ACTION_DATA_WRITE, mBluetoothGatt.getDevice().getAddress(), data);
+        broadcastWriteUpdate(ACTION_DATA_WRITE, mBluetoothDevice.getAddress(), data);
+        Log.d(TAG, "write " + (int)(data[0] & 0x00ff) + " " + (int)(data[1] & 0x00ff) + " to actuator");
     }
 }
