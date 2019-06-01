@@ -249,22 +249,31 @@ public class MainActivity extends AppCompatActivity {
 
     private void showEditPIDValue()
     {
-        final float kp = PIDController.getKp();
-        final float ki = PIDController.getKi();
-        final float kd = PIDController.getKd();
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+          //final String serverUri = preferences.getString(MQTT_SERVER_URI, PI);
+        final float kp = preferences.getFloat(TemperatureControlService.PID_P_VALUE, 0.0f);
+        final float ki = preferences.getFloat(TemperatureControlService.PID_I_VALUE, 0.0f);
+        final float kd = preferences.getFloat(TemperatureControlService.PID_D_VALUE, 0.0f);
 
         // kD
         NumberPickerBuilder nbp = new NumberPickerBuilder()
                 .setFragmentManager(getSupportFragmentManager())
                 .setStyleResId(R.style.BetterPickersDialogFragment)
                 .setLabelText("Set kD.");
-        if(kp != 0.0f)
-            nbp.setCurrentNumber(BigDecimal.valueOf(kd));
+        nbp.setCurrentNumber(BigDecimal.valueOf(kd));
         nbp.addNumberPickerDialogHandler(new NumberPickerDialogFragment.NumberPickerDialogHandlerV2() {
             @Override
             public void onDialogNumberSet(int reference, BigInteger number, double decimal,
                                           boolean isNegative, BigDecimal fullNumber) {
-                PIDController.setKd(fullNumber.floatValue());
+
+                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putFloat(TemperatureControlService.PID_D_VALUE, fullNumber.floatValue());
+                editor.apply();
+
+                Intent intent = new Intent(TemperatureControlService.ACTION_PID_D_VALUE_CHANGED);
+                intent.putExtra(TemperatureControlService.EXTRA_DATA_D_VALUE, fullNumber.floatValue());
+                sendBroadcast(intent);
             }
         });
         nbp.show();
@@ -274,13 +283,20 @@ public class MainActivity extends AppCompatActivity {
                 .setFragmentManager(getSupportFragmentManager())
                 .setStyleResId(R.style.BetterPickersDialogFragment)
                 .setLabelText("Set kI.");
-        if(kp != 0.0f)
-            nbp.setCurrentNumber(BigDecimal.valueOf(ki));
+        nbp.setCurrentNumber(BigDecimal.valueOf(ki));
         nbp.addNumberPickerDialogHandler(new NumberPickerDialogFragment.NumberPickerDialogHandlerV2() {
             @Override
             public void onDialogNumberSet(int reference, BigInteger number, double decimal,
                                           boolean isNegative, BigDecimal fullNumber) {
-                PIDController.setKi(fullNumber.floatValue());
+
+                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putFloat(TemperatureControlService.PID_I_VALUE, fullNumber.floatValue());
+                editor.apply();
+
+                Intent intent = new Intent(TemperatureControlService.ACTION_PID_I_VALUE_CHANGED);
+                intent.putExtra(TemperatureControlService.EXTRA_DATA_I_VALUE, fullNumber.floatValue());
+                sendBroadcast(intent);
             }
         });
         nbp.show();
@@ -290,13 +306,20 @@ public class MainActivity extends AppCompatActivity {
                 .setFragmentManager(getSupportFragmentManager())
                 .setStyleResId(R.style.BetterPickersDialogFragment)
                 .setLabelText("Set kP.");
-        if(kp != 0.0f)
-            nbp.setCurrentNumber(BigDecimal.valueOf(kp));
+        nbp.setCurrentNumber(BigDecimal.valueOf(kp));
         nbp.addNumberPickerDialogHandler(new NumberPickerDialogFragment.NumberPickerDialogHandlerV2() {
             @Override
             public void onDialogNumberSet(int reference, BigInteger number, double decimal,
                                           boolean isNegative, BigDecimal fullNumber) {
-                PIDController.setKp(fullNumber.floatValue());
+
+                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = preferences.edit();
+                editor.putFloat(TemperatureControlService.PID_P_VALUE, fullNumber.floatValue());
+                editor.apply();
+
+                Intent intent = new Intent(TemperatureControlService.ACTION_PID_P_VALUE_CHANGED);
+                intent.putExtra(TemperatureControlService.EXTRA_DATA_P_VALUE, fullNumber.floatValue());
+                sendBroadcast(intent);
             }
         });
         nbp.show();

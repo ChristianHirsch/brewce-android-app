@@ -7,8 +7,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Binder;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
+import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -19,6 +22,10 @@ public class TemperatureControlService extends Service {
 
     public static final String TAG = TemperatureControlService.class.getSimpleName();
 
+    public static final String PID_P_VALUE = "PID_P_VALUE";
+    public static final String PID_I_VALUE = "PID_I_VALUE";
+    public static final String PID_D_VALUE = "PID_D_VALUE";
+
     private final IBinder mBinder = new LocalBinder();
 
     public class LocalBinder extends Binder {
@@ -27,10 +34,23 @@ public class TemperatureControlService extends Service {
         }
     }
 
+    public final static String ACTION_PID_P_VALUE_CHANGED =
+            "net.chrivieh.brewce.TemperatureControlService.ACTION_PID_P_VALUE_CHANGED";
+    public final static String ACTION_PID_I_VALUE_CHANGED =
+            "net.chrivieh.brewce.TemperatureControlService.ACTION_PID_I_VALUE_CHANGED";
+    public final static String ACTION_PID_D_VALUE_CHANGED =
+            "net.chrivieh.brewce.TemperatureControlService.ACTION_PID_D_VALUE_CHANGED";
+
     public final static String ACTION_CONTROL_EFFORT_CHANGED =
             "net.chrivieh.brewce.TemperatureControlService.ACTION_CONTROL_EFFORT_CHANGED";
     public final static String EXTRA_DATA =
             "net.chrivieh.brewce.TemperatureControlService.EXTRA_DATA";
+    public final static String EXTRA_DATA_P_VALUE =
+            "net.chrivieh.brewce.TemperatureControlService.EXTRA_DATA_P_VALUE";
+    public final static String EXTRA_DATA_I_VALUE =
+            "net.chrivieh.brewce.TemperatureControlService.EXTRA_DATA_I_VALUE";
+    public final static String EXTRA_DATA_D_VALUE =
+            "net.chrivieh.brewce.TemperatureControlService.EXTRA_DATA_D_VALUE";
 
     private NodeScannerService mNodeScannerService;
 
@@ -38,11 +58,14 @@ public class TemperatureControlService extends Service {
 
     public TemperatureControlService() {
         mPIDController = new PIDController();
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        final float kP = preferences.getFloat(PID_P_VALUE, 25.5f);
+        final float kI = preferences.getFloat(PID_I_VALUE,  5.0f);
+        final float kD = preferences.getFloat(PID_D_VALUE,  2.5f);
 
-        mPIDController.setKp(25.5f);
-
-        mPIDController.setKi(5.0f);
-        mPIDController.setKd(2.5f);
+        mPIDController.setKp(kP);
+        mPIDController.setKi(kI);
+        mPIDController.setKd(kD);
 
         mPIDController.setWindupLimit(10.0f);
         mPIDController.setLowerLimit(0.0f);
@@ -66,6 +89,9 @@ public class TemperatureControlService extends Service {
         intentFilter.addAction(SensorNode.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(AutomaticControlFragment.ACTION_TARGET_TEMPERATURE_CHANGED);
         intentFilter.addAction(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED);
+        intentFilter.addAction(TemperatureControlService.ACTION_PID_P_VALUE_CHANGED);
+        intentFilter.addAction(TemperatureControlService.ACTION_PID_I_VALUE_CHANGED);
+        intentFilter.addAction(TemperatureControlService.ACTION_PID_D_VALUE_CHANGED);
         // register for updates from NodeScannerService
         registerReceiver(mBroadcastReceiver,
                 new IntentFilter(intentFilter));
@@ -118,6 +144,21 @@ public class TemperatureControlService extends Service {
             else if(intent.getAction().equals(TemperatureProfileControlService.ACTION_TARGET_TEMPERATURE_CHANGED)) {
                 float targetTemp = intent.getFloatExtra(TemperatureProfileControlService.EXTRA_DATA, 0.0f);
                 mPIDController.setSetpoint(targetTemp);
+            }
+            else if(intent.getAction().equals(ACTION_PID_P_VALUE_CHANGED)) {
+                float kP = intent.getFloatExtra(EXTRA_DATA_P_VALUE, 0.0f);
+                mPIDController.setKp(kP);
+                Log.d(TAG, "P value changed to " + kP);
+            }
+            else if(intent.getAction().equals(ACTION_PID_I_VALUE_CHANGED)) {
+                float kI = intent.getFloatExtra(EXTRA_DATA_I_VALUE, 0.0f);
+                mPIDController.setKi(kI);
+                Log.d(TAG, "I value changed to " + kI);
+            }
+            else if(intent.getAction().equals(ACTION_PID_D_VALUE_CHANGED)) {
+                float kD = intent.getFloatExtra(EXTRA_DATA_D_VALUE, 0.0f);
+                mPIDController.setKd(kD);
+                Log.d(TAG, "D value changed to " + kD);
             }
         }
     };

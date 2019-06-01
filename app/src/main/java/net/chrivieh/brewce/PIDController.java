@@ -8,9 +8,9 @@ import android.util.Log;
 
 public class PIDController {
 
-    private static float mKp = 1.0f;
-    private static float mKi = 0.0f;
-    private static float mKd = 0.0f;
+    private float mKp = 1.0f;
+    private float mKi = 0.0f;
+    private float mKd = 0.0f;
 
     private float mCutoffFrequency = -1.0f;
 
@@ -96,18 +96,18 @@ public class PIDController {
         return calcControlEffort(state);
     }
 
-    public static void setKp(float kp) {
+    public void setKp(float kp) {
         mKp = kp;
     }
-    public static float getKp() { return mKp; }
+    public float getKp() { return mKp; }
 
-    public static void setKi(float ki) { mKi = ki; }
-    public static float getKi() { return mKi; }
+    public void setKi(float ki) { mKi = ki; }
+    public float getKi() { return mKi; }
 
-    public static void setKd(float kd) {
+    public void setKd(float kd) {
         mKd = kd;
     }
-    public static float getKd() { return mKd; }
+    public float getKd() { return mKd; }
 
     public void setCutoffFrequency(float mCutoffFrequency) {
         this.mCutoffFrequency = mCutoffFrequency;
